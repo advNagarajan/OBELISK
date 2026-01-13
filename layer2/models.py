@@ -35,32 +35,40 @@ class SoundProfile:
 
 @dataclass
 class SystemProfile:
-    # Platform inference
+    # Identity
     artifact_root: str 
+
+    # Platform inference
     platform_candidates: List[PlatformCandidate]
 
-    # CPU & execution model (conservative)
-    cpu_class: Dict        # {"minimum": "8086|286|386|unknown", "confidence": float}
-    memory_model: str      # "real", "protected", "unknown"
+    # CPU & execution model
+    cpu_class: Dict
+    memory_model: Literal["real", "protected", "unknown"]
 
-    # Layer-2 assertions (minimal)
-    graphics: List[str]    # always ["text"]
-    sound: SoundProfile    # empty; sound is runtime-optional
+    # Conservative assertions
+    graphics: List[str]
+    sound: SoundProfile
 
-    # Evidence only (non-binding)
+    # Evidence-only (non-binding)
     graphics_evidence: List[str]
     sound_evidence: List[str]
 
-    # Execution candidates
+    # Entry points (if applicable)
     entry_points: List[EntryPoint]
 
-    # Constraints inferred from strong evidence
+    # Hard / negative constraints
     constraints: Dict[str, bool]
     negative_constraints: List[str]
 
-    # Raw evidence & derived execution hints (for audit / Layer 3)
+    # Raw evidence (audit trail)
     evidence: Dict[str, list]
+
+    # Execution-relevant evidence (backend-usable)
     execution_evidence: Dict[str, list]
 
-    execution_mode: str  # "program" | "bootable_os" | "unknown"
-
+    # 🔹 NEW: execution surface (ties to Layer 1)
+    execution_surface: Literal[
+        "boot_disk",
+        "program",
+        "unknown"
+    ]

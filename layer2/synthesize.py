@@ -24,28 +24,19 @@ def synthesize(artifact, scan, candidates, inspection, inference):
     ]
 
     # --------------------------------------
-    # Execution mode inference (PCem-critical)
+    # Execution surface (backend-neutral)
     # --------------------------------------
-    execution_mode = "unknown"
-    
-    if artifact.disk_image:
-        execution_mode = "bootable_os"
-
-    elif inspection.get("pe_exe"):
-        execution_mode = "bootable_os"
-
+    if artifact.disk_image or artifact.bootable:
+        execution_surface = "boot_disk"
     elif candidates:
-        execution_mode = "program"
-
+        execution_surface = "program"
     else:
-        execution_mode = "unknown"
+        execution_surface = "unknown"
 
     # --------------------------------------
     # Entry points
     # --------------------------------------
-    if execution_mode == "bootable_os":
-        entry_points = []
-    else:
+    if execution_surface == "program":
         entry_points = [
             EntryPoint(
                 path=p,
@@ -53,9 +44,11 @@ def synthesize(artifact, scan, candidates, inspection, inference):
             )
             for p in candidates
         ]
+    else:
+        entry_points = []
 
     # --------------------------------------
-    # Raw evidence (for audit & Layer 3)
+    # Evidence (audit trail)
     # --------------------------------------
     evidence = {
         "pm_evidence": inspection.get("pm_evidence", []),
@@ -65,12 +58,11 @@ def synthesize(artifact, scan, candidates, inspection, inference):
 
     # --------------------------------------
     # Execution-relevant evidence
-    # (only derived from confident inference)
     # --------------------------------------
     execution_evidence = {}
 
     if inference["memory_model"] == "protected":
-        execution_evidence["requires_386"] = list({
+        execution_evidence["requires_386+"] = list({
             e["file"] for e in inspection.get("pm_evidence", [])
         })
 
@@ -81,9 +73,6 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         evidence=inspection.get("sound_evidence", [])
     )
 
-    # --------------------------------------
-    # Final SystemProfile
-    # --------------------------------------
     return SystemProfile(
         artifact_root=artifact.normalized_path,
         platform_candidates=platforms,
@@ -91,11 +80,9 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         cpu_class=inference["cpu_class"],
         memory_model=inference["memory_model"],
 
-        # Layer 2 assertions are conservative
         graphics=["text"],
         sound=sound_profile,
 
-        # Evidence-only fields
         graphics_evidence=inspection.get("graphics_evidence", []),
         sound_evidence=inspection.get("sound_evidence", []),
 
@@ -106,5 +93,6 @@ def synthesize(artifact, scan, candidates, inspection, inference):
 
         evidence=evidence,
         execution_evidence=execution_evidence,
-        execution_mode=execution_mode
+
+        execution_surface=execution_surface
     )
