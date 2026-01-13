@@ -21,5 +21,6 @@ generated_dosbox_*.conf
 dosbox*.conf
 
 # Test suites
-obelisk_layer1_tests/
-obelisk_layer2_tests/
+obelisk_layer_tests/notes
+obelisk_layer_tests/outputs
+obelisk_layer_tests/raw_inputs

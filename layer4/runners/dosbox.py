@@ -1,10 +1,6 @@
 import subprocess
 from pathlib import Path
-
-from pathlib import Path
-
-
-DOSBOX_PATH = r"C:\Program Files (x86)\DOSBox-0.74-3\DOSBox.exe"
+from config import DOSBOX_PATH
 
 class DOSBoxRunner:
     def launch(self, plan):
