@@ -18,3 +18,4 @@ class ArtifactDescriptor:
     container: bool
     disk_image: bool
     bootable:bool 
+    execution_surfaces: List[str]

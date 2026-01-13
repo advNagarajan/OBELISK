@@ -11,7 +11,6 @@ from layer1.normalize import (
     normalize_zip
 )
 
-
 def ingest(path: str) -> ArtifactDescriptor:
     artifact_id = artifact_id_from_path(path)
     artifact_dir = create_artifact_dir(artifact_id)
@@ -25,21 +24,18 @@ def ingest(path: str) -> ArtifactDescriptor:
     inner_disk_image = False
     inner_bootable = False
 
-
     KNOWN_FLOPPY_SIZES = {
-    163840,   # 160 KB
-    184320,   # 180 KB
-    327680,   # 320 KB
-    368640,   # 360 KB
-    737280,   # 720 KB
-    1228800,  # 1.2 MB
-    1474560,  # 1.44 MB
-}
-
+        163840,    # 160 KB
+        184320,    # 180 KB
+        327680,    # 320 KB
+        368640,    # 360 KB
+        737280,    # 720 KB
+        1228800,   # 1.2 MB
+        1474560,   # 1.44 MB
+    }
 
     if os.path.isfile(path):
         ftype = detect_file_type(path)
-
         size = os.path.getsize(path)
 
         is_raw_floppy = (
@@ -51,11 +47,13 @@ def ingest(path: str) -> ArtifactDescriptor:
             source_type = "archive"
             container = True
             normalize_zip(path, artifact_dir)
+
         elif ftype == "disk_image" or is_raw_floppy:
             source_type = "disk_image"
             disk_image = True
             bootable = detect_bootable(path)
             normalize_single_file(path, artifact_dir)
+
         else:
             source_type = "single_file"
             normalize_single_file(path, artifact_dir)
@@ -81,14 +79,26 @@ def ingest(path: str) -> ArtifactDescriptor:
         files.append(
             FileEntry(
                 path=rel,
-                size=os.path.getsize(full),
+                size=size,
                 hash=sha256_file(full)
             )
         )
+
     if container:
         disk_image = inner_disk_image
         bootable = inner_bootable
 
+    # 🔹 NEW: execution surface inference (Layer-1 safe)
+    execution_surfaces = []
+
+    if bootable:
+        execution_surfaces.append("boot_disk")
+
+    if "exe" in file_types or "com" in file_types:
+        execution_surfaces.append("dos_executable")
+
+    if not execution_surfaces:
+        execution_surfaces.append("non_executable")
 
     return ArtifactDescriptor(
         artifact_id=artifact_id,
@@ -99,5 +109,6 @@ def ingest(path: str) -> ArtifactDescriptor:
         file_types=sorted(file_types),
         container=container,
         disk_image=disk_image,
-        bootable=bootable
+        bootable=bootable,
+        execution_surfaces=execution_surfaces
     )
