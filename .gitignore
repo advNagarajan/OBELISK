@@ -7,6 +7,7 @@ layer2_debug/
 artifacts/
 
 # Layer output
+layer3_output/
 layer4_output/
 layer5_output/
 

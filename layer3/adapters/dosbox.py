@@ -2,7 +2,7 @@ from typing import List
 from layer3.adapters.base import EmulatorAdapter
 from layer3.launchplan import LaunchPlan
 from layer3.canonical import CanonicalMachine
-
+import os
 
 class DOSBoxAdapter(EmulatorAdapter):
 
@@ -112,7 +112,10 @@ class DOSBoxAdapter(EmulatorAdapter):
         svga: bool
     ) -> LaunchPlan:
 
-        conf_path = f"dosbox_{variant}.conf"
+        output_dir = "layer3_output"
+        os.makedirs(output_dir, exist_ok=True)
+
+        conf_path = os.path.join(output_dir, f"dosbox_{variant}.conf")
 
         with open(conf_path, "w") as f:
             # ---------------- CPU ----------------

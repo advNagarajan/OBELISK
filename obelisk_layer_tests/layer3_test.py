@@ -1,41 +1,79 @@
 import sys
 from pathlib import Path
-from pprint import pprint
+import json
 
-OBELISK_ROOT = Path(r"C:\Users\Aadhav Nagarajan\OneDrive\Desktop\OBELISK")
-sys.path.insert(0, str(OBELISK_ROOT))
+# --------------------------------------------------
+# Make project importable
+# --------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from layer1.ingest import ingest
-from layer2.analyze import analyze
+from layer2.models import (
+    SystemProfile,
+    PlatformCandidate,
+    EntryPoint,
+    SoundProfile,
+)
+
 from layer3.synthesize import synthesize
 
 
-def test(path):
-    artifact = ingest(path)
-    profile = analyze(artifact)
-    plans = synthesize(profile)
+def fake_program_profile(tmp_path: Path) -> SystemProfile:
+    return SystemProfile(
+        artifact_root=str(tmp_path),
 
-    print("\n=== ARTIFACT ===")
-    print(path)
-    print("execution_mode:", profile.execution_mode)
+        platform_candidates=[
+            PlatformCandidate("dos", 0.9),
+        ],
 
-    print("\n=== LAUNCH PLANS ===")
-    for p in plans:
-        pprint(p)
+        cpu_class={"minimum": "286", "confidence": 0.8},
+        memory_model="real",
 
-    assert not (
-        profile.execution_mode == "bootable_os"
-        and any(p.emulator == "dosbox" for p in plans)
+        graphics=["text"],
+        sound=SoundProfile(
+            requirement="optional",
+            supported_devices=[],
+            confidence=0.3,
+            evidence=[]
+        ),
+
+        graphics_evidence=[],
+        sound_evidence=[],
+
+        entry_points=[
+            EntryPoint("GAME.EXE", 0.9)
+        ],
+
+        constraints={},
+        negative_constraints=[],
+
+        evidence={},
+        execution_evidence={},
+
+        execution_surface="program"
     )
 
 
+# --------------------------------------------------
+# Manual runner (prints JSONs)
+# --------------------------------------------------
 if __name__ == "__main__":
-    inputs = [
-        r"C:\Users\Aadhav Nagarajan\OneDrive\Desktop\OBELISK\obelisk_layer_tests\raw_inputs\freedos.boot.disk.160K.img",
-        r"C:\Users\Aadhav Nagarajan\OneDrive\Desktop\OBELISK\obelisk_layer_tests\raw_inputs\Win95.iso",
-        r"C:\Users\Aadhav Nagarajan\OneDrive\Desktop\OBELISK\obelisk_layer_tests\raw_inputs\DOOM.exe",
-        r"C:\Users\Aadhav Nagarajan\OneDrive\Desktop\OBELISK\obelisk_layer_tests\raw_inputs\archive.zip",
-    ]
+    artifact_dir = PROJECT_ROOT / "artifacts" / "layer3_test_artifact"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    for p in inputs:
-        test(p)
+    profile = fake_program_profile(artifact_dir)
+    plans = synthesize(profile)
+
+    print("\n=== LAYER 3 LAUNCH PLANS ===")
+    for plan in plans:
+        print(f"- {plan.emulator} | {plan.variant} | priority={plan.priority}")
+
+    print("\n=== QEMU JSON CONFIGS ===")
+    for plan in plans:
+        if plan.emulator == "qemu":
+            cfg_path = Path(plan.config_path)
+            print(f"\n--- {cfg_path} ---")
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                print(json.dumps(json.load(f), indent=2))
+
+    print("\nDone.")

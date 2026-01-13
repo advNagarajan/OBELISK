@@ -1,5 +1,7 @@
 import json
+import os
 from typing import List
+
 from layer3.adapters.base import EmulatorAdapter
 from layer3.launchplan import LaunchPlan
 from layer3.canonical import CanonicalMachine
@@ -17,100 +19,85 @@ class QEMUAdapter(EmulatorAdapter):
     ) -> List[LaunchPlan]:
 
         plans = []
+        artifact_root = system_profile.artifact_root
 
         if system_profile.execution_surface == "program":
             plans.extend(
-                self._program_variants(machine, system_profile)
+                self._program_variants(machine, artifact_root, system_profile)
             )
 
         if system_profile.execution_surface == "boot_disk":
             plans.extend(
-                self._boot_variants(machine, system_profile)
+                self._boot_variants(machine, artifact_root)
             )
 
         return plans
 
-    # =================================================
-    # Program execution (FreeDOS-style)
-    # =================================================
+    # -------------------------------------------------
+    # Program-style execution
+    # -------------------------------------------------
     def _program_variants(
         self,
         machine: CanonicalMachine,
+        artifact_root: str,
         system_profile
     ) -> List[LaunchPlan]:
 
-        artifact_root = system_profile.artifact_root
         entry = max(
             system_profile.entry_points,
             key=lambda e: e.confidence
         ).path
 
-        plans = []
-
-        plans.append(
+        return [
             self._make_plan(
-                machine,
-                artifact_root,
+                machine=machine,
+                artifact_root=artifact_root,
                 entry_point=entry,
-                variant="freedos-minimal",
+                variant="program-minimal",
                 priority=3,
                 permissive=False
-            )
-        )
-
-        plans.append(
+            ),
             self._make_plan(
-                machine,
-                artifact_root,
+                machine=machine,
+                artifact_root=artifact_root,
                 entry_point=entry,
-                variant="freedos-permissive",
+                variant="program-permissive",
                 priority=4,
                 permissive=True
             )
-        )
+        ]
 
-        return plans
-
-    # =================================================
+    # -------------------------------------------------
     # Bootable disk execution
-    # =================================================
+    # -------------------------------------------------
     def _boot_variants(
         self,
         machine: CanonicalMachine,
-        system_profile
+        artifact_root: str
     ) -> List[LaunchPlan]:
 
-        artifact_root = system_profile.artifact_root
-
-        plans = []
-
-        plans.append(
+        return [
             self._make_plan(
-                machine,
-                artifact_root,
+                machine=machine,
+                artifact_root=artifact_root,
                 entry_point="",
-                variant="boot-conservative",
+                variant="boot-minimal",
                 priority=2,
                 permissive=False
-            )
-        )
-
-        plans.append(
+            ),
             self._make_plan(
-                machine,
-                artifact_root,
+                machine=machine,
+                artifact_root=artifact_root,
                 entry_point="",
                 variant="boot-permissive",
                 priority=3,
                 permissive=True
             )
-        )
+        ]
 
-        return plans
-
-    # =================================================
-    # Config writer (Layer-3 responsibility)
-    # =================================================
+    # -------------------------------------------------
+    # JSON config writer (Layer 3 responsibility)
+    # -------------------------------------------------
     def _make_plan(
         self,
         machine: CanonicalMachine,
@@ -121,26 +108,32 @@ class QEMUAdapter(EmulatorAdapter):
         permissive: bool
     ) -> LaunchPlan:
 
-        config_path = f"qemu_{variant}.json"
+        output_dir = "layer3_output"
+        os.makedirs(output_dir, exist_ok=True)
+
+        config_filename = f"qemu_{variant}.json"
+        config_path = os.path.join(output_dir, config_filename)
 
         config = {
             "machine": {
                 "arch": "i386",
                 "cpu": machine.cpu if not permissive else "max",
-                "memory_mb": machine.memory_mb if not permissive else max(machine.memory_mb, 64)
+                "memory_mb": (
+                    machine.memory_mb
+                    if not permissive
+                    else max(machine.memory_mb, 64)
+                )
             },
             "graphics": machine.graphics,
             "sound": machine.sound,
             "dos_extender": machine.dos_extender,
             "execution": {
-                "mode": (
-                    "program" if entry_point else "boot_disk"
-                ),
+                "mode": "program" if entry_point else "boot_disk",
                 "entry_point": entry_point
             }
         }
 
-        with open(config_path, "w") as f:
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2)
 
         return LaunchPlan(
