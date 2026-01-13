@@ -6,9 +6,16 @@ from layer3.launchplan import LaunchPlan
 class EmulatorAdapter(ABC):
 
     @abstractmethod
+    def supports(self, system_profile) -> bool:
+        """
+        Whether this backend can attempt execution for the given profile.
+        """
+        pass
+
+    @abstractmethod
     def generate_variants(
         self,
         machine: CanonicalMachine,
-        entry_point: str
+        system_profile
     ) -> List[LaunchPlan]:
         pass

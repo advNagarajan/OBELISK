@@ -1,44 +1,23 @@
 from layer3.resolver import resolve_machine
 from layer3.adapters.dosbox import DOSBoxAdapter
-from layer3.adapters.pcem import PCemAdapter   # NEW
+from layer3.adapters.qemu import QEMUAdapter
+
+ADAPTERS = [
+    DOSBoxAdapter(),
+    QEMUAdapter()
+]
 
 def synthesize(system_profile):
     machine = resolve_machine(system_profile)
+    plans = []
 
-    # -------------------------------------------------
-    # PROGRAM EXECUTION (DOSBox path – unchanged)
-    # -------------------------------------------------
-    if system_profile.execution_mode == "program":
-        entry = max(
-            system_profile.entry_points,
-            key=lambda e: e.confidence
-        ).path
+    for adapter in ADAPTERS:
+        if adapter.supports(system_profile):
+            plans.extend(
+                adapter.generate_variants(
+                    machine,
+                    system_profile
+                )
+            )
 
-        adapter = DOSBoxAdapter()
-        plans = adapter.generate_variants(
-            machine,
-            entry,
-            system_profile.artifact_root,
-            system_profile
-        )
-
-        return sorted(plans, key=lambda p: p.priority)
-
-    # -------------------------------------------------
-    # BOOTABLE OS EXECUTION (PCem path)
-    # -------------------------------------------------
-    elif system_profile.execution_mode == "bootable_os":
-        adapter = PCemAdapter()
-        plans = adapter.generate_variants(
-            machine,
-            system_profile.artifact_root,
-            system_profile
-        )
-
-        return sorted(plans, key=lambda p: p.priority)
-
-    # -------------------------------------------------
-    # UNKNOWN EXECUTION MODE
-    # -------------------------------------------------
-    else:
-        return []
+    return sorted(plans, key=lambda p: p.priority)

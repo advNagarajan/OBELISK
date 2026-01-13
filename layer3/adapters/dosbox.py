@@ -3,15 +3,25 @@ from layer3.adapters.base import EmulatorAdapter
 from layer3.launchplan import LaunchPlan
 from layer3.canonical import CanonicalMachine
 
+
 class DOSBoxAdapter(EmulatorAdapter):
+
+    def supports(self, system_profile) -> bool:
+        # DOSBox only supports program-style execution
+        return system_profile.execution_surface == "program"
 
     def generate_variants(
         self,
         machine: CanonicalMachine,
-        entry_point: str,
-        artifact_root: str,
         system_profile
     ) -> List[LaunchPlan]:
+
+        artifact_root = system_profile.artifact_root
+
+        entry_point = max(
+            system_profile.entry_points,
+            key=lambda e: e.confidence
+        ).path
 
         plans = []
 
@@ -40,9 +50,7 @@ class DOSBoxAdapter(EmulatorAdapter):
                 )
             )
 
-        # Variant S: Sound Probe
-        sound = system_profile.sound
-
+        # Variant S: sound probe (exploratory)
         sound = system_profile.sound
 
         sound_probe = (
@@ -61,12 +69,12 @@ class DOSBoxAdapter(EmulatorAdapter):
                     variant="sound-probe",
                     priority=2,
                     cycles="3000",
-                    sound=True,     # force sound ON
+                    sound=True,
                     svga=False
                 )
             )
 
-        # Variant 3: auto CPU (less strict)
+        # Variant 3: auto CPU (less strict timing)
         plans.append(
             self._make_plan(
                 machine, entry_point, artifact_root,
@@ -90,7 +98,6 @@ class DOSBoxAdapter(EmulatorAdapter):
             )
         )
 
-
         return plans
 
     def _make_plan(
@@ -108,63 +115,39 @@ class DOSBoxAdapter(EmulatorAdapter):
         conf_path = f"dosbox_{variant}.conf"
 
         with open(conf_path, "w") as f:
+            # ---------------- CPU ----------------
             f.write("[cpu]\n")
             f.write(f"cputype={machine.cpu}\n")
             f.write("core=normal\n")
             f.write(f"cycles={cycles}\n\n")
 
+            # ---------------- Memory ----------------
             f.write("[memory]\n")
             f.write(f"memsize={machine.memory_mb}\n\n")
 
+            # ---------------- Video ----------------
             f.write("[dosbox]\n")
             f.write("machine=svga_s3\n" if svga else "machine=vga\n")
             f.write("\n")
 
+            # ---------------- Sound ----------------
             f.write("[sblaster]\n")
             if sound:
-                # Exploratory or assertive sound: always enable a backend
                 f.write("sbtype=sb16\n")
             else:
                 f.write("sbtype=none\n")
 
-            '''f.write("\n[autoexec]\n")
-            f.write("@echo off\n")
-            f.write(f'mount c "{artifact_root}"\n')
-            f.write("c:\n")
-
-            # Sentinel: entrypoint reached
-            f.write("echo START > c:\\obelisk_started.txt\n")
-
-            # Run the program normally (NO redirection)
-            f.write(f"{entry_point}\n")
-
-            # Capture DOS ERRORLEVEL
-            f.write("echo %errorlevel% > c:\\obelisk_errorlevel.txt\n")
-
-            # Sentinel: program returned to DOS
-            f.write("echo END > c:\\obelisk_finished.txt\n")'''
-
-            '''f.write("\n[autoexec]\n")
-            f.write("@echo off\n")
-            f.write(f'mount c "{artifact_root}"\n')
-            f.write("c:\n")
-
-            # Absolute proof that AUTOEXEC ran
-            f.write("echo AUTOEXEC_RAN > c:\\__AUTOEXEC_PROOF.txt\n")
-
-            # Keep DOSBox open so you can see it
-            f.write("echo If you see this, the config is being used.\n")
-            f.write("pause\n")'''
-
+            # ---------------- AUTOEXEC ----------------
             f.write("\n[autoexec]\n")
             f.write("@echo off\n")
             f.write(f'mount c "{artifact_root}"\n')
             f.write("c:\n")
 
-            f.write("echo START > C:\STARTED.TXT\n")
+            # Execution sentinels (Layer-4 friendly)
+            f.write("echo START > C:\\STARTED.TXT\n")
             f.write(f"{entry_point}\n")
-            f.write("echo %errorlevel% > C:\ERRLVL.TXT\n")
-            f.write("echo END > C:\FINISH.TXT\n")
+            f.write("echo %errorlevel% > C:\\ERRLVL.TXT\n")
+            f.write("echo END > C:\\FINISH.TXT\n")
 
         return LaunchPlan(
             emulator="dosbox",

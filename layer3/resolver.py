@@ -1,6 +1,6 @@
 from layer3.canonical import CanonicalMachine
 
-CPU_ORDER = ["286", "386", "486"]
+CPU_ORDER = ["8086", "286", "386", "486"]
 
 def escalate_cpu(min_cpu: str) -> str:
     if min_cpu not in CPU_ORDER:
@@ -10,7 +10,6 @@ def escalate_cpu(min_cpu: str) -> str:
 
 
 def resolve_machine(system_profile) -> CanonicalMachine:
-    # ---- CPU ----
     cpu_info = system_profile.cpu_class
     min_cpu = cpu_info.get("minimum", "286")
 
@@ -20,7 +19,6 @@ def resolve_machine(system_profile) -> CanonicalMachine:
         else min_cpu
     )
 
-    # ---- Memory / DOS extender ----
     requires_ext = system_profile.constraints.get(
         "requires_dos_extender", False
     )
@@ -28,36 +26,21 @@ def resolve_machine(system_profile) -> CanonicalMachine:
     memory_mb = 32 if requires_ext else 16
     dos_extender = requires_ext
 
-    # ---- Graphics ----
-    if "svga" in system_profile.graphics:
-        graphics = "svga"
-    elif "vga" in system_profile.graphics or "text" in system_profile.graphics:
-        graphics = "vga"
-    else:
-        graphics = "vga"
+    graphics = "vga"
 
-    # ---- Sound ----
     sound_profile = system_profile.sound
 
     if sound_profile.requirement == "absent":
         sound = []
         sound_required = False
-
     else:
-        # optional OR required
         if "sb16" in sound_profile.supported_devices:
             sound = ["sb16"]
         elif "adlib" in sound_profile.supported_devices:
             sound = ["adlib"]
         else:
             sound = []
-
         sound_required = (sound_profile.requirement == "required")
-
-    execution_mode = system_profile.execution_mode
-
-    needs_bios = (execution_mode == "bootable_os")
-    needs_boot_disk = (execution_mode == "bootable_os")
 
     return CanonicalMachine(
         cpu=cpu,
@@ -65,8 +48,5 @@ def resolve_machine(system_profile) -> CanonicalMachine:
         graphics=graphics,
         sound=sound,
         sound_required=sound_required,
-        dos_extender=dos_extender,
-        execution_mode=execution_mode,
-        needs_bios=needs_bios,
-        needs_boot_disk=needs_boot_disk
+        dos_extender=dos_extender
     )
