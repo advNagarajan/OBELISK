@@ -25,3 +25,6 @@ dosbox*.conf
 obelisk_layer_tests/notes
 obelisk_layer_tests/outputs
 obelisk_layer_tests/raw_inputs
+obelisk_layer_tests/.freedos_installed
+obelisk_layer_tests/dos.img
+obelisk_layer_tests/freedos/
