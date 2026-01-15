@@ -157,7 +157,7 @@ class DOSBoxAdapter(EmulatorAdapter):
             config_path=conf_path,
             artifact_root=artifact_root,
             entry_point=entry_point,
-            timeout=20,
+            fallback_timeout=20,
             confidence=0.6,
             variant=variant,
             priority=priority

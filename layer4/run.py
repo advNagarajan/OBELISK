@@ -1,6 +1,6 @@
 from layer4.runners.dosbox import DOSBoxRunner
-from layer4.runners.pcem import PCemRunner
 from layer4.profiler import ExecutionProfiler
+from layer4.runners.qemu import QEMURunner
 
 
 def run_layer4(plans):
@@ -11,8 +11,8 @@ def run_layer4(plans):
         if plan.emulator == "dosbox":
             runner = DOSBoxRunner()
 
-        elif plan.emulator == "pcem":
-            runner = PCemRunner()
+        elif plan.emulator == "qemu":
+            runner = QEMURunner()
 
         else:
             raise ValueError(f"Unknown emulator: {plan.emulator}")

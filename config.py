@@ -1,2 +1,4 @@
 DOSBOX_PATH = r"C:\Program Files (x86)\DOSBox-0.74-3\DOSBox.exe"
 PCEM_PATH = r"C:\Users\Aadhav Nagarajan\Downloads\PCemV17Win\PCem.exe"
+QEMU_PATH = r"C:\Program Files\qemu\qemu-system-i386.exe"
+FREEDOS_IMG = r"D:/obelisk_runtime/dos.img"

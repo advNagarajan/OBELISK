@@ -154,7 +154,7 @@ class QEMUAdapter(EmulatorAdapter):
             config_path=config_path,
             artifact_root=artifact_root,
             entry_point=entry_point,
-            timeout=120 if entry_point == "" else 30,
+            fallback_timeout=120 if entry_point == "" else 30,
             confidence=0.6 if not permissive else 0.5,
             variant=variant,
             priority=priority
