@@ -127,9 +127,21 @@ class QEMUAdapter(EmulatorAdapter):
             "graphics": machine.graphics,
             "sound": machine.sound,
             "dos_extender": machine.dos_extender,
+
+            # NEW — declarative storage intent
+            "storage": {
+                "boot_disk": "dos",
+                "writable_fs": True,
+                "fs_type": "fat"
+            },
+
             "execution": {
                 "mode": "program" if entry_point else "boot_disk",
-                "entry_point": entry_point
+                "entry_point": entry_point,
+
+                # NEW — execution semantics
+                "working_directory": "C:\\",
+                "autoexec": True
             }
         }
 

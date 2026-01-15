@@ -6,9 +6,8 @@ class LaunchPlan:
     config_path: str
     artifact_root: str
     entry_point: str
-    timeout: int
-    confidence: float
 
-    # NEW
-    variant: str        # human-readable label
-    priority: int       # lower = try first
+    fallback_timeout: int  # used only if config omits timeout
+    confidence: float
+    variant: str
+    priority: int
