@@ -117,7 +117,7 @@ class QEMUAdapter(EmulatorAdapter):
         config = {
             "machine": {
                 "arch": "i386",
-                "cpu": machine.cpu if not permissive else "max",
+                "cpu": machine.cpu,
                 "memory_mb": (
                     machine.memory_mb
                     if not permissive
@@ -138,10 +138,11 @@ class QEMUAdapter(EmulatorAdapter):
             "execution": {
                 "mode": "program" if entry_point else "boot_disk",
                 "entry_point": entry_point,
-
-                # NEW — execution semantics
                 "working_directory": "C:\\",
-                "autoexec": True
+                "autoexec": True,
+
+                # NEW
+                "timeout_ms": 30000 if entry_point else 120000
             }
         }
 
