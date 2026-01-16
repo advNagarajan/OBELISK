@@ -69,6 +69,8 @@ class SystemProfile:
     # 🔹 NEW: execution surface (ties to Layer 1)
     execution_surface: Literal[
         "boot_disk",
-        "program",
+        "dos_program",
+        "linux_init",
+        "linux_program",
         "unknown"
     ]

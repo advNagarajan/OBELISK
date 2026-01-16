@@ -22,7 +22,7 @@ def _eval_protected_mode(pm_evidence):
     return False
 
 
-def infer_requirements(scan, inspection):
+def infer_requirements(scan, inspection, artifact):
     result = {
         "platforms": [],
         "cpu_class": {
@@ -30,16 +30,22 @@ def infer_requirements(scan, inspection):
             "confidence": 0.0
         },
         "memory_model": "unknown",
-
-        # IMPORTANT:
-        # graphics & sound are NOT asserted in Layer 2
         "graphics": ["text"],
         "sound": [],
-
         "constraints": {},
         "negative": []
     }
 
+    # 🔹 Phase 2.5 Linux short-circuit
+    if "linux" in artifact.platforms_present:
+        result["platforms"] = [("linux", 0.95)]
+        result["negative"] = ["not_dos", "not_windows"]
+        result["sound"] = {
+            "requirement": "absent",
+            "devices": [],
+            "confidence": 0.9
+        }
+        return result
     # --------------------------------------
     # Platform inference
     # --------------------------------------

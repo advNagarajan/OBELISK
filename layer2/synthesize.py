@@ -28,15 +28,22 @@ def synthesize(artifact, scan, candidates, inspection, inference):
     # --------------------------------------
     if artifact.disk_image or artifact.bootable:
         execution_surface = "boot_disk"
+    elif artifact.has_init:
+        execution_surface = "linux_init"
+    elif (
+        "linux_elf" in artifact.execution_surfaces or
+        "linux_script" in artifact.execution_surfaces
+    ):
+        execution_surface = "linux_program"
     elif candidates:
-        execution_surface = "program"
+        execution_surface = "dos_program"
     else:
         execution_surface = "unknown"
 
     # --------------------------------------
     # Entry points
     # --------------------------------------
-    if execution_surface == "program":
+    if execution_surface in ("dos_program", "linux_program", "linux_init"):
         entry_points = [
             EntryPoint(
                 path=p,

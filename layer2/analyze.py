@@ -9,5 +9,5 @@ def analyze(artifact: ArtifactDescriptor):
     scan = global_scan(artifact)
     candidates = find_entry_points(artifact)
     inspection = inspect_candidates(artifact, candidates)
-    inference = infer_requirements(scan, inspection)
+    inference = infer_requirements(scan, inspection, artifact)
     return synthesize(artifact, scan, candidates, inspection, inference)
