@@ -6,6 +6,7 @@ class FileEntry:
     path: str            # relative to artifact root
     size: int
     hash: str
+    mode: int
 
 @dataclass
 class ArtifactDescriptor:
@@ -19,3 +20,4 @@ class ArtifactDescriptor:
     disk_image: bool
     bootable:bool 
     execution_surfaces: List[str]
+    has_init: bool

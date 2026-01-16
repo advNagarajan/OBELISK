@@ -12,6 +12,7 @@ from layer1.normalize import (
 )
 
 def ingest(path: str) -> ArtifactDescriptor:
+    has_init = False
     artifact_id = artifact_id_from_path(path)
     artifact_dir = create_artifact_dir(artifact_id)
 
@@ -71,6 +72,12 @@ def ingest(path: str) -> ArtifactDescriptor:
         size = os.path.getsize(full)
         file_types.add(ftype)
 
+        st = os.stat(full)
+        mode = st.st_mode
+
+        if rel == "init":
+            has_init = True
+
         if ftype in ("disk_image", "boot_sector"):
             inner_disk_image = True
             if detect_bootable(full):
@@ -80,7 +87,8 @@ def ingest(path: str) -> ArtifactDescriptor:
             FileEntry(
                 path=rel,
                 size=size,
-                hash=sha256_file(full)
+                hash=sha256_file(full),
+                mode=mode        # ✅ NEW
             )
         )
 
@@ -97,6 +105,15 @@ def ingest(path: str) -> ArtifactDescriptor:
     if "exe" in file_types or "com" in file_types:
         execution_surfaces.append("dos_executable")
 
+    if "elf" in file_types:
+        execution_surfaces.append("linux_elf")
+
+    if "script" in file_types:
+        execution_surfaces.append("linux_script")
+
+    if has_init:
+        execution_surfaces.append("linux_init")
+
     if not execution_surfaces:
         execution_surfaces.append("non_executable")
 
@@ -110,5 +127,6 @@ def ingest(path: str) -> ArtifactDescriptor:
         container=container,
         disk_image=disk_image,
         bootable=bootable,
-        execution_surfaces=execution_surfaces
+        execution_surfaces=execution_surfaces,
+        has_init=has_init
     )

@@ -1,10 +1,18 @@
 MAGIC_BYTES = {
+    b"\x7FELF": "elf",
     b"MZ": "exe",
     b"PK\x03\x04": "zip",
     b"\xEB\x3C\x90": "boot_sector",
     b"\x55\xAA": "boot_signature"
 }
 
+def detect_shebang(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(2) == b"#!"
+    except Exception:
+        return False
+    
 def detect_magic(path: str) -> str:
     try:
         with open(path, "rb") as f:
@@ -36,6 +44,10 @@ def detect_file_type(path: str) -> str:
     magic = detect_magic(path)
     if magic != "unknown":
         return magic
+
+    if detect_shebang(path):
+        return "script"
+
     return detect_extension(path)
 
 def detect_bootable(path: str) -> bool:
