@@ -30,17 +30,22 @@ def resolve_machine(system_profile) -> CanonicalMachine:
 
     sound_profile = system_profile.sound
 
-    if sound_profile.requirement == "absent":
+    if sound_profile is None:
         sound = []
         sound_required = False
     else:
-        if "sb16" in sound_profile.supported_devices:
-            sound = ["sb16"]
-        elif "adlib" in sound_profile.supported_devices:
-            sound = ["adlib"]
-        else:
+        if sound_profile.requirement == "absent":
             sound = []
-        sound_required = (sound_profile.requirement == "required")
+            sound_required = False
+        else:
+            if "sb16" in sound_profile.supported_devices:
+                sound = ["sb16"]
+            elif "adlib" in sound_profile.supported_devices:
+                sound = ["adlib"]
+            else:
+                sound = []
+
+            sound_required = (sound_profile.requirement == "required")
 
     return CanonicalMachine(
         cpu=cpu,
