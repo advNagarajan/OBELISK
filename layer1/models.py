@@ -21,3 +21,4 @@ class ArtifactDescriptor:
     bootable:bool 
     execution_surfaces: List[str]
     has_init: bool
+    platforms_present: List[str]

@@ -12,6 +12,7 @@ from layer1.normalize import (
 )
 
 def ingest(path: str) -> ArtifactDescriptor:
+    platforms_present = set()
     has_init = False
     artifact_id = artifact_id_from_path(path)
     artifact_dir = create_artifact_dir(artifact_id)
@@ -104,15 +105,19 @@ def ingest(path: str) -> ArtifactDescriptor:
 
     if "exe" in file_types or "com" in file_types:
         execution_surfaces.append("dos_executable")
+        platforms_present.add("dos")
 
     if "elf" in file_types:
         execution_surfaces.append("linux_elf")
+        platforms_present.add("linux")
 
     if "script" in file_types:
         execution_surfaces.append("linux_script")
+        platforms_present.add("linux")
 
     if has_init:
         execution_surfaces.append("linux_init")
+        platforms_present.add("linux")
 
     if not execution_surfaces:
         execution_surfaces.append("non_executable")
@@ -122,11 +127,16 @@ def ingest(path: str) -> ArtifactDescriptor:
         source_type=source_type,
         original_name=original_name,
         normalized_path=artifact_dir,
+
         files=files,
         file_types=sorted(file_types),
+
         container=container,
         disk_image=disk_image,
         bootable=bootable,
+
         execution_surfaces=execution_surfaces,
-        has_init=has_init
+        has_init=has_init,
+
+        platforms_present=sorted(platforms_present)
     )
