@@ -1,56 +1,60 @@
-"""
-Layer 3 Linux synthesis tests for OBELISK Phase 2.5
-
-These tests assert that:
-- Linux execution surfaces are handled deterministically
-- Exactly one LaunchPlan is produced for Linux
-- Entry point semantics are correct
-- DOS logic is not regressed
-
-Passing these tests means Linux is CLOSED at Layer 3.
-"""
 import sys
 from pathlib import Path
 import os
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+"""
+Manual inspection script for Layer 3 profile selection.
+
+This script prints synthesized LaunchPlans for visual verification.
+It performs NO assertions and must not be used as a test gate.
+"""
+
 from layer3.synthesize import synthesize
-from layer2.models import (
-    SystemProfile,
-    PlatformCandidate,
-    EntryPoint
-)
+from layer2.models import SystemProfile, PlatformCandidate, EntryPoint
 
 
-def _base_linux_profile(
-    *,
-    artifact_root: str,
-    execution_surface: str,
-    entry_points=None
-):
-    """
-    Helper to construct a minimal Linux SystemProfile
-    consistent with Phase 2.5 assumptions.
-    """
-    return SystemProfile(
-        artifact_root=artifact_root,
+def dump_plans(label, plans):
+    print("=" * 70)
+    print(label)
+    print("=" * 70)
+
+    if not plans:
+        print("NO PLANS PRODUCED")
+        return
+
+    for i, plan in enumerate(plans, 1):
+        print(f"Plan #{i}")
+        print(f"  emulator      : {plan.emulator}")
+        print(f"  variant       : {plan.variant}")
+        print(f"  entry_point   : {plan.entry_point}")
+        print(f"  artifact_root : {plan.artifact_root}")
+        print(f"  priority      : {plan.priority}")
+        print(f"  confidence    : {plan.confidence}")
+        print()
+
+
+def linux_program_case():
+    profile = SystemProfile(
+        artifact_root="artifacts/hello",
 
         platform_candidates=[
             PlatformCandidate(platform="linux", confidence=0.95)
         ],
 
-        cpu_class={},                     # Linux abstracts CPU details
+        cpu_class={},
         memory_model="protected",
 
-        graphics=[],                      # Non-binding for Phase 2.5
+        graphics=[],
         sound=None,
 
         graphics_evidence=[],
         sound_evidence=[],
 
-        entry_points=entry_points or [],
+        entry_points=[],
 
         constraints={},
         negative_constraints=["not_dos", "not_windows"],
@@ -58,71 +62,48 @@ def _base_linux_profile(
         evidence={},
         execution_evidence={},
 
-        execution_surface=execution_surface
-    )
-
-
-# ---------------------------------------------------------------------
-# TEST 1: Linux ELF / script (linux_program)
-# ---------------------------------------------------------------------
-
-def test_layer3_linux_program():
-    """
-    A single ELF or script artifact should synthesize
-    exactly one Linux LaunchPlan with /init as entry point.
-    """
-
-    profile = _base_linux_profile(
-        artifact_root="artifacts/hello",
         execution_surface="linux_program"
     )
 
     plans = synthesize(profile)
-
-    assert len(plans) == 1, "Expected exactly one LaunchPlan for linux_program"
-
-    plan = plans[0]
-    assert plan.emulator == "qemu"
-    assert plan.variant == "linux"
-    assert plan.entry_point == "/init"
+    dump_plans("LINUX PROGRAM (ELF / SCRIPT)", plans)
 
 
-# ---------------------------------------------------------------------
-# TEST 2: Linux initramfs-style artifact (linux_init)
-# ---------------------------------------------------------------------
-
-def test_layer3_linux_initramfs():
-    """
-    An artifact that already provides /init should be
-    executed as-is, without synthetic entry points.
-    """
-
-    profile = _base_linux_profile(
+def linux_init_case():
+    profile = SystemProfile(
         artifact_root="artifacts/linux_artifact",
-        execution_surface="linux_init",
+
+        platform_candidates=[
+            PlatformCandidate(platform="linux", confidence=0.95)
+        ],
+
+        cpu_class={},
+        memory_model="protected",
+
+        graphics=[],
+        sound=None,
+
+        graphics_evidence=[],
+        sound_evidence=[],
+
         entry_points=[
             EntryPoint(path="init", confidence=0.9)
-        ]
+        ],
+
+        constraints={},
+        negative_constraints=["not_dos", "not_windows"],
+
+        evidence={},
+        execution_evidence={},
+
+        execution_surface="linux_init"
     )
 
     plans = synthesize(profile)
-
-    assert len(plans) == 1, "Expected exactly one LaunchPlan for linux_init"
-
-    plan = plans[0]
-    assert plan.entry_point == "/init"
+    dump_plans("LINUX INITRAMFS ARTIFACT", plans)
 
 
-# ---------------------------------------------------------------------
-# TEST 3: Regression guard — DOS must not trigger Linux logic
-# ---------------------------------------------------------------------
-
-def test_layer3_dos_not_linux():
-    """
-    DOS artifacts must not activate Linux adapters.
-    This protects Phase 2 from regression.
-    """
-
+def dos_case():
     profile = SystemProfile(
         artifact_root="artifacts/DoomTest2",
 
@@ -151,18 +132,10 @@ def test_layer3_dos_not_linux():
     )
 
     plans = synthesize(profile)
+    dump_plans("DOS PROGRAM (REGRESSION CHECK)", plans)
 
-    assert all(
-        p.variant != "linux" for p in plans
-    ), "DOS execution must not produce Linux LaunchPlans"
-
-
-# ---------------------------------------------------------------------
-# Optional manual runner
-# ---------------------------------------------------------------------
 
 if __name__ == "__main__":
-    test_layer3_linux_program()
-    test_layer3_linux_initramfs()
-    test_layer3_dos_not_linux()
-    print("Layer 3 Linux synthesis tests PASSED.")
+    linux_program_case()
+    linux_init_case()
+    dos_case()

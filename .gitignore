@@ -29,3 +29,6 @@ obelisk_layer_tests/.freedos_installed
 obelisk_layer_tests/dos.img
 obelisk_layer_tests/freedos/
 obelisk_layer_tests/obelisk_layer1_tests
+
+# Runtime
+runtime/
