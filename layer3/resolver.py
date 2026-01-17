@@ -10,6 +10,11 @@ def escalate_cpu(min_cpu: str) -> str:
 
 
 def resolve_machine(system_profile) -> CanonicalMachine:
+    if system_profile.execution_surface == "linux_contract":
+        raise RuntimeError(
+            "resolve_machine() must not be called for Linux artifacts"
+        )
+    
     cpu_info = system_profile.cpu_class
     min_cpu = cpu_info.get("minimum", "286")
 

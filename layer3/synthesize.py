@@ -15,16 +15,13 @@ def synthesize(system_profile):
 
     plans = []
 
-    if system_profile.execution_surface.startswith("linux"):
+    if system_profile.execution_surface == "linux_contract":
         intent = resolve_linux_intent(system_profile)
 
         for adapter in ADAPTERS:
-            if adapter.supports(system_profile):
+            if isinstance(adapter, LinuxQEMUAdapter):
                 plans.extend(
-                    adapter.generate_variants(
-                        intent,
-                        system_profile
-                    )
+                    adapter.generate_variants(intent, system_profile)
                 )
     else:
         machine = resolve_machine(system_profile)

@@ -40,11 +40,16 @@ def infer_requirements(scan, inspection, artifact):
     if "linux" in artifact.platforms_present:
         result["platforms"] = [("linux", 0.95)]
         result["negative"] = ["not_dos", "not_windows"]
+
+        # Linux has no entry point; requires execution contract
+        result["constraints"]["requires_linux_execution_contract"] = True
+
         result["sound"] = {
             "requirement": "absent",
             "devices": [],
             "confidence": 0.9
         }
+
         return result
     # --------------------------------------
     # Platform inference

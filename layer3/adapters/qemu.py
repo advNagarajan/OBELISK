@@ -10,7 +10,11 @@ from layer3.canonical import CanonicalMachine
 class QEMUAdapter(EmulatorAdapter):
 
     def supports(self, system_profile) -> bool:
-        return system_profile.execution_surface in ("program", "boot_disk")
+        return system_profile.execution_surface in (
+            "program",
+            "dos_program",
+            "boot_disk"
+        )
 
     def generate_variants(
         self,
@@ -21,7 +25,7 @@ class QEMUAdapter(EmulatorAdapter):
         plans = []
         artifact_root = system_profile.artifact_root
 
-        if system_profile.execution_surface == "program":
+        if system_profile.execution_surface in ("program", "dos_program"):
             plans.extend(
                 self._program_variants(machine, artifact_root, system_profile)
             )

@@ -45,7 +45,11 @@ layer3_output = [
 from layer4.run import run_layer4
 
 # Filter QEMU plans
-qemu_plans = [p for p in plans if p.emulator == "qemu"]
+print(plans)
+qemu_plans = [
+    p for p in plans
+    if p.emulator == "qemu" and p.entry_point is not None
+]
 assert qemu_plans, "No QEMU plans generated"
 
 # Prefer program-minimal if available

@@ -5,6 +5,10 @@ __pycache__/
 # Layer debug / artifacts
 layer2_debug/
 artifacts/
+assets/
+build/
+serial.log
+linux_test_config.json
 
 # Layer output
 layer3_output/

@@ -1,38 +1,45 @@
+from pathlib import Path
 from layer3.linux_intent import LinuxExecutionIntent
 
-DEFAULT_KERNEL = "vmlinuz"
-DEFAULT_INITRAMFS = "initramfs.cpio.gz"
-
 def resolve_linux_intent(system_profile) -> LinuxExecutionIntent:
+    contract = system_profile.linux_execution_contract
+    if not contract:
+        raise ValueError("Linux execution requires execution contract")
 
-    if system_profile.execution_surface == "linux_init":
-        mode = "init"
-        initramfs = system_profile.artifact_root
+    artifact_root = Path(system_profile.artifact_root)
 
-    elif system_profile.execution_surface == "linux_program":
-        mode = "program"
-        initramfs = "generated"   # Layer 4 will build it
+    # ----------------------------
+    # Phase 2.5 Linux inference
+    # ----------------------------
 
-    elif system_profile.execution_surface == "boot_disk":
-        mode = "boot"
-        initramfs = ""
+    # Case 1: single script artifact
+    scripts = [
+        f for f in artifact_root.iterdir()
+        if f.is_file() and f.suffix in (".sh",)
+    ]
+
+    if len(scripts) == 1:
+        script = scripts[0]
+        exec_path = "/bin/busybox"
+        exec_args = ["sh", f"/artifact/{script.name}"]
 
     else:
-        raise ValueError("Unsupported Linux execution surface")
+        raise NotImplementedError(
+            "Linux execution inference supports single-script artifacts only (Phase 2.5)"
+        )
 
     return LinuxExecutionIntent(
-        kernel_path=DEFAULT_KERNEL,
-        initramfs_path=initramfs,
+        kernel_path="vmlinuz",
+        initramfs_path="initramfs-obelisk.img",
 
-        mode=mode,
-        entry_point="/init",
+        exec_path=exec_path,
+        exec_args=exec_args,
 
-        memory_mb=64,
+        memory_mb=512,
         timeout_ms=30000,
 
-        graphics="none",
         console="serial",
+        graphics="none",
 
-        env={},
-        arguments=[]
+        env={}
     )

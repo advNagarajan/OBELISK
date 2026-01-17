@@ -28,13 +28,8 @@ def synthesize(artifact, scan, candidates, inspection, inference):
     # --------------------------------------
     if artifact.disk_image or artifact.bootable:
         execution_surface = "boot_disk"
-    elif artifact.has_init:
-        execution_surface = "linux_init"
-    elif (
-        "linux_elf" in artifact.execution_surfaces or
-        "linux_script" in artifact.execution_surfaces
-    ):
-        execution_surface = "linux_program"
+    elif inference["constraints"].get("requires_linux_execution_contract"):
+        execution_surface = "linux_contract"
     elif candidates:
         execution_surface = "dos_program"
     else:
@@ -43,7 +38,7 @@ def synthesize(artifact, scan, candidates, inspection, inference):
     # --------------------------------------
     # Entry points
     # --------------------------------------
-    if execution_surface in ("dos_program", "linux_program", "linux_init"):
+    if execution_surface == "dos_program":
         entry_points = [
             EntryPoint(
                 path=p,
@@ -80,6 +75,14 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         evidence=inspection.get("sound_evidence", [])
     )
 
+    linux_execution_contract = None
+
+    if execution_surface == "linux_contract":
+        linux_execution_contract = {
+            "interface": "exec+args",
+            "executor": "init"
+        }
+
     return SystemProfile(
         artifact_root=artifact.normalized_path,
         platform_candidates=platforms,
@@ -101,5 +104,6 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         evidence=evidence,
         execution_evidence=execution_evidence,
 
-        execution_surface=execution_surface
+        execution_surface=execution_surface,
+        linux_execution_contract=linux_execution_contract
     )

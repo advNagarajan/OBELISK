@@ -15,7 +15,7 @@ class EmulatorAdapter(ABC):
     @abstractmethod
     def generate_variants(
         self,
-        machine: CanonicalMachine,
+        machine_or_intent,
         system_profile
     ) -> List[LaunchPlan]:
         pass

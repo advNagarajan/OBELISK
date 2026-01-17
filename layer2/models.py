@@ -70,7 +70,8 @@ class SystemProfile:
     execution_surface: Literal[
         "boot_disk",
         "dos_program",
-        "linux_init",
-        "linux_program",
+        "linux_contract",
         "unknown"
     ]
+
+    linux_execution_contract: Dict | None = None

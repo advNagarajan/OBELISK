@@ -1,19 +1,18 @@
 from dataclasses import dataclass
-from typing import Literal, Dict, List
+from typing import List, Dict
 
 @dataclass
 class LinuxExecutionIntent:
     kernel_path: str
     initramfs_path: str
 
-    mode: Literal["init", "program", "boot"]
-    entry_point: str              # always "/init"
+    exec_path: str          # e.g. /bin/busybox
+    exec_args: List[str]    # e.g. ["sh", "/artifact/script.sh"]
 
     memory_mb: int
     timeout_ms: int
 
-    graphics: Literal["none", "framebuffer"]
-    console: Literal["serial"]
+    console: str            # "serial"
+    graphics: str           # "none"
 
     env: Dict[str, str]
-    arguments: List[str]

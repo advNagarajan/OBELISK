@@ -7,8 +7,4 @@ def find_entry_points(artifact):
         if name.endswith((".exe", ".com", ".bat")):
             points.append(f.path)
 
-    # Linux Phase 2.5: /init is authoritative
-    if artifact.has_init:
-        points.append("init")
-
     return points

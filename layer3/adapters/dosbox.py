@@ -8,7 +8,7 @@ class DOSBoxAdapter(EmulatorAdapter):
 
     def supports(self, system_profile) -> bool:
         # DOSBox only supports program-style execution
-        return system_profile.execution_surface == "program"
+        return system_profile.execution_surface in ("program", "dos_program")
 
     def generate_variants(
         self,

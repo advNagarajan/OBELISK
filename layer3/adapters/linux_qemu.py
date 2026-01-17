@@ -9,7 +9,7 @@ from layer3.linux_intent import LinuxExecutionIntent
 class LinuxQEMUAdapter(EmulatorAdapter):
 
     def supports(self, system_profile) -> bool:
-        return system_profile.execution_surface.startswith("linux")
+        return system_profile.execution_surface == "linux_contract"
 
     def generate_variants(
         self,
@@ -23,18 +23,25 @@ class LinuxQEMUAdapter(EmulatorAdapter):
         config_path = os.path.join(output_dir, "qemu_linux.json")
 
         config = {
-            "kernel": intent.kernel_path,
-            "initramfs": intent.initramfs_path,
-            "append": "console=ttyS0 panic=-1",
+            "platform": "linux",
 
-            "memory_mb": intent.memory_mb,
-            "graphics": intent.graphics,
-            "console": intent.console,
+            "machine": {
+                "arch": "x86_64",
+                "memory_mb": intent.memory_mb
+            },
 
-            "execution": {
-                "mode": intent.mode,
-                "entry_point": intent.entry_point,
-                "timeout_ms": intent.timeout_ms
+            "kernel": {
+                "image": intent.kernel_path,
+                "initramfs": intent.initramfs_path,
+                "cmdline": (
+                    "console=ttyS0 panic=-1 "
+                    f"obelisk.exec={intent.exec_path} "
+                    f"obelisk.args={','.join(intent.exec_args)}"
+                )
+            },
+
+            "storage": {
+                "boot_disk": "linux"
             }
         }
 
@@ -46,7 +53,7 @@ class LinuxQEMUAdapter(EmulatorAdapter):
                 emulator="qemu",
                 config_path=config_path,
                 artifact_root=system_profile.artifact_root,
-                entry_point=intent.entry_point,
+                entry_point=None,
                 fallback_timeout=intent.timeout_ms,
                 confidence=0.9,
                 variant="linux",
