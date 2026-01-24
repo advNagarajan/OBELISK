@@ -34,13 +34,18 @@ obelisk_layer_tests/dos.img
 obelisk_layer_tests/freedos/
 obelisk_layer_tests/obelisk_layer1_tests
 
-# Ignore everything in runtime by default
+# Ignore everything under runtime
 runtime/**
 
-# Keep directory placeholders
+# Re-allow directory traversal
+!runtime/
+!runtime/dos/
+!runtime/freedos/
+!runtime/linux/
+
+# Keep placeholders
 !runtime/dos/.gitkeep
 !runtime/freedos/.gitkeep
 
-# Linux: allow ONLY the kernel
-!runtime/linux/
-!runtime/linux/wsl_build_initramfs.py
+# Linux: allow only kernel
+!runtime/linux/wsl_build_initramfs.pyc
