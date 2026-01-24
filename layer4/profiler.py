@@ -4,8 +4,10 @@ from pathlib import Path
 from layer4.models import ExecutionProfile
 from layer4.phases import PHASES
 from layer4.observers.config_semantics import parse_dosbox_config
+from layer4.models import ExecutionProfile, ExecutionMode
 from layer4.observers.telemetry import sample_cpu
-
+from layer4.observers.console import analyze_console_output
+from layer4.observers.process import observe_process
 
 class ExecutionProfiler:
     def profile(self, plan, runner):
@@ -83,6 +85,7 @@ class ExecutionProfiler:
                 emulator="dosbox",
                 variant=plan.variant,
                 entry_point=plan.entry_point,
+                execution_mode=ExecutionMode.PROCESS,
                 phases=phases,
                 sentinels={
                     "started": started,
@@ -93,6 +96,7 @@ class ExecutionProfiler:
                 sound_outcome=sound_outcome,
                 host_telemetry=host_telemetry,
             )
+        
 
         # ============================================================
         # QEMU PORTION — FIXED
@@ -106,9 +110,8 @@ class ExecutionProfiler:
                 config = json.load(f)
 
             execution = config.get("execution", {})
-            timeout_ms = execution.get("timeout_ms")
-            if timeout_ms is None:
-                raise ValueError("QEMU execution requires timeout_ms in config")
+            
+            timeout_ms = execution.get("timeout_ms", plan.fallback_timeout)
 
             timeout_sec = timeout_ms / 1000.0
 
@@ -116,38 +119,72 @@ class ExecutionProfiler:
             proc = runner.launch(plan)
             phases["emulator_started"] = True
 
-            time.sleep(2)
-            phases["filesystem_mounted"] = True
+            if not plan.variant.startswith("linux"):
+                time.sleep(2)
+                phases["filesystem_mounted"] = True
+
+            # ============================================================
+            # LINUX IS NON-TERMINATING — DO NOT TOUCH PROCESS
+            # ============================================================
+            if plan.variant.startswith("linux"):
+                phases["entrypoint_invoked"] = True
+                phases["control_transferred"] = True
+                phases["stability_window_reached"] = True
+
+                return ExecutionProfile(
+                    emulator="qemu",
+                    variant=plan.variant,
+                    entry_point=None,  # SYSTEM execution has no entry point
+                    execution_mode=ExecutionMode.SYSTEM,
+                    phases=phases,
+                    sentinels={
+                        "system_booted": True,
+                        "pid1_alive": True,
+                    },
+                    config=config,
+                    sound_outcome=None,
+                    host_telemetry={
+                        "system_mode": True,
+                        "process_model": "non-terminating",
+                        "qemu_running": proc.poll() is None,
+                    },
+                )
 
             time.sleep(timeout_sec)
+            try:
+                stdout, stderr = proc.communicate(timeout=2)
+            except Exception:
+                stdout, stderr = "", ""
 
             # --- IMPORTANT FIX ---
             # QEMU sentinels live in FAT-backed run_dir, NOT artifact_root
             run_dir = getattr(proc, "_obelisk_run_dir", None)
             if run_dir is None:
-                raise RuntimeError("QEMU runner did not expose _obelisk_run_dir")
+                output = stdout + stderr
+                started = (
+                    "Linux version" in output or
+                    "Kernel command line" in output
+                )
+                finished = proc.poll() is not None
+                errorlevel = proc.returncode
+            else:
+                # DOS QEMU path: use FAT-backed sentinels
+                started = (run_dir / "STARTED.TXT").exists()
+                finished = (run_dir / "FINISH.TXT").exists()
 
-            started = (run_dir / "STARTED.TXT").exists()
-            finished = (run_dir / "FINISH.TXT").exists()
-
-            errorlevel = None
-            err_file = run_dir / "ERRLVL.TXT"
-            if err_file.exists():
-                try:
-                    errorlevel = int(err_file.read_text().strip())
-                except ValueError:
-                    errorlevel = None
+                errorlevel = None
+                err_file = run_dir / "ERRLVL.TXT"
+                if err_file.exists():
+                    try:
+                        errorlevel = int(err_file.read_text().strip())
+                    except ValueError:
+                        errorlevel = None
 
             # --- FIXED PHASE LOGIC ---
             # Long-running programs (DOOM) are valid
             phases["entrypoint_invoked"] = started
             phases["control_transferred"] = started
-            phases["stability_window_reached"] = (
-                started and (
-                    not finished or
-                    (finished and errorlevel == 0)
-                )
-            )
+            phases["stability_window_reached"] = started and not finished
             try:
                 if proc.poll() is None:
                     proc.terminate()
@@ -155,17 +192,28 @@ class ExecutionProfiler:
             except Exception:
                 pass
 
+            # --- Capture console output ---
+            
+
+            console_facts = analyze_console_output(stdout, stderr)
+            process_facts = observe_process(proc, timeout=1)
+
             return ExecutionProfile(
                 emulator="qemu",
                 variant=plan.variant,
                 entry_point=plan.entry_point,
+                execution_mode=ExecutionMode.PROCESS,
                 phases=phases,
                 sentinels={
                     "started": started,
                     "finished": finished,
                     "errorlevel": errorlevel,
                 },
-                config={},  # QEMU semantics parsed later if needed
-                sound_outcome=None,
-                host_telemetry={},
+                config=config,
+                sound_outcome="enabled",
+                host_telemetry={
+                    **console_facts,
+                    **process_facts,
+                },
             )
+

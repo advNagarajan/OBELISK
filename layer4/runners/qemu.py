@@ -4,64 +4,165 @@ import subprocess
 import tempfile
 import shutil
 from pathlib import Path
-from layer4.utils.qemu_synthesis import synthesize_qemu_args
 import json
 
 from config import QEMU_PATH, FREEDOS_IMG
+from layer4.utils.qemu_synthesis import synthesize_qemu_args
+from layer4.utils.initramfs_linux import build_initramfs
 
+def windows_short_path(p: Path) -> str:
+    import subprocess
+    out = subprocess.check_output(
+        ["cmd", "/c", "for %I in (\"" + str(p) + "\") do @echo %~sI"],
+        text=True
+    )
+    return out.strip()
 
 class QEMURunner:
     """
-    Phase 2 QEMU runner.
-    Responsibility:
-      - Boot FreeDOS
-      - Mount a writable FAT C: drive
-      - Execute AUTOEXEC.BAT
+    Phase 2.5 QEMU runner.
+
+    DOS:
+      - Boots FreeDOS from system image
+      - Uses per-run FAT directory as D:
+      - Executes AUTOEXEC.BAT via FDAUTO.BAT
+
+    Linux:
+      - Kernel + initramfs (system boot model)
+      - No entry point
+      - Non-terminating execution
     """
 
     def launch(self, plan):
         print(">>> QEMURunner.launch() CALLED FROM:", __file__)
+
         # -----------------------------
-        # Load Layer-3 config (authoritative)
+        # Load Layer-3 config
         # -----------------------------
         with open(plan.config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
 
-        # -----------------------------
-        # Validate storage semantics
-        # -----------------------------
         storage = config.get("storage")
-        if not storage:
-            raise ValueError("QEMU Phase 2 requires storage semantics")
 
-        if storage.get("boot_disk") != "dos":
-            raise NotImplementedError("QEMU Phase 2 supports only DOS boot")
+        # Linux does NOT require FAT / writable FS
+        if "kernel" in config:
+            pass
 
-        if storage.get("fs_type") != "fat":
-            raise NotImplementedError("QEMU Phase 2 requires FAT filesystem")
+        else:
+            # DOS path
+            if not storage:
+                raise ValueError("QEMU requires storage semantics")
 
-        if storage.get("writable_fs") is not True:
-            raise NotImplementedError("QEMU Phase 2 requires writable filesystem")
+            if storage.get("boot_disk") != "dos":
+                raise NotImplementedError("DOS QEMU requires boot_disk = 'dos'")
+
+            if storage.get("fs_type") != "fat":
+                raise NotImplementedError("DOS QEMU requires FAT filesystem")
+
+            if storage.get("writable_fs") is not True:
+                raise NotImplementedError("DOS QEMU requires writable filesystem")
 
         # -----------------------------
-        # Prepare per-run FAT C: drive
+        # Linux execution path
         # -----------------------------
-        tmpdir = tempfile.TemporaryDirectory()
-        run_dir = Path(tmpdir.name)
+        if plan.variant.startswith("linux"):
+
+            # HARD GUARD: Linux has no entry point
+            if getattr(plan, "entry_point", None):
+                raise ValueError(
+                    "Linux execution does not support entry_point "
+                    "(system boot model)"
+                )
+
+            machine = config.get("machine", {})
+            kernel_cfg = config["kernel"]
+
+            kernel = Path(kernel_cfg["image"]).resolve()
+
+            # --------------------------------------------------
+            # Locate OBELISK root from config_path
+            # --------------------------------------------------
+            config_path = Path(plan.config_path).resolve()
+            obelisk_root = None
+
+            for parent in config_path.parents:
+                if (parent / "runtime" / "linux").exists():
+                    obelisk_root = parent
+                    break
+
+            if obelisk_root is None:
+                raise RuntimeError(
+                    "Could not locate OBELISK root (missing runtime/linux)"
+                )
+
+            runtime_linux = obelisk_root / "runtime" / "linux"
+            runtime_linux.mkdir(parents=True, exist_ok=True)
+
+            initramfs = runtime_linux / "initramfs.img"
+
+            build_initramfs(
+                project_root=Path.cwd(),
+                artifact_path=Path(plan.artifact_root),
+                entrypoint=config["artifact"]["entrypoint"],
+                output_path=initramfs,
+            )
+
+            if not kernel.exists():
+                raise FileNotFoundError(f"Kernel not found: {kernel}")
+            if not initramfs.exists():
+                raise FileNotFoundError(f"Initramfs not found: {initramfs}")
+
+            artifact_root = Path(plan.artifact_root)
+            if not artifact_root.exists():
+                raise FileNotFoundError(f"Artifact root not found: {artifact_root}")
+
+            # -----------------------------
+            # QEMU command (Linux)
+            # -----------------------------
+            cmd = [
+                r"C:\Program Files\qemu\qemu-system-x86_64.exe",
+                "-machine", "pc",
+                "-cpu", machine.get("cpu", "qemu64"),
+                "-m", str(machine.get("memory_mb", 256)),
+                "-vga", "std",
+                "-kernel", str(kernel),
+                "-initrd", str(initramfs),
+                "-append", kernel_cfg.get(
+                    "cmdline",
+                    "console=tty0 console=ttyS0 panic=-1"
+                ),
+                "-no-reboot",
+                # Serial is logged for observability; success is userspace reach,
+                # not process exit.
+                "-serial", "file:serial.log",
+            ]
+
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            # Phase 2.5 Linux semantic markers
+            proc._obelisk_execution_model = "system"
+            proc._obelisk_platform = "linux"
+
+            return proc
 
         # -----------------------------
-        # Execution semantics
+        # DOS execution path (unchanged)
         # -----------------------------
         execution = config.get("execution", {})
         if not execution.get("autoexec", False):
-            raise NotImplementedError("QEMU Phase 2 requires autoexec execution")
+            raise NotImplementedError("DOS execution requires autoexec")
 
-        entry = execution.get("entry_point")
+        entry = execution.get("entry_point") or plan.entry_point
         if not entry:
-            raise ValueError("QEMU Phase 2 requires an entry_point")
-        
+            raise ValueError("DOS execution requires an entry point")
+
         src_root = Path(plan.artifact_root)
-        entry = execution["entry_point"]
+        entry = entry.upper()
 
         candidates = [entry]
         if "." not in entry:
@@ -95,44 +196,51 @@ class QEMURunner:
                 f"Entry point {entry} not found under artifact_root {src_root}"
             )
 
+        # -----------------------------
+        # Prepare per-run FAT D: drive
+        # -----------------------------
+        tmpdir = tempfile.TemporaryDirectory()
+        run_dir = Path(tmpdir.name)
+
         print(">>> artifact_root =", src_root)
         print(">>> entry_dir =", entry_dir)
         print(">>> entry_dir == src_root ?", entry_dir == src_root)
-        # Copy files into C:\
+
+        # Copy files into run_dir (D:)
         if entry_dir == src_root:
-            # Flat artifact → copy files directly into C:\
-            print(">>> COPYING FLAT ARTIFACT INTO C:\\")
+            print(">>> COPYING FLAT ARTIFACT INTO D:\\")
             for item in entry_dir.iterdir():
                 if item.is_file():
-                    print(">>> copying file", item.name)
                     shutil.copy(item, run_dir / item.name)
         else:
             print(">>> COPYING NESTED ARTIFACT INTO SUBDIR", entry_dir.name)
-            # Nested artifact → preserve subdirectory
-            dst = run_dir / entry_dir.name
-            shutil.copytree(entry_dir, dst)
+            shutil.copytree(entry_dir, run_dir / entry_dir.name)
 
-        print(">>> C:\\ contents after copy:")
-        for p in run_dir.iterdir():
-            print("   ", p.name, "(dir)" if p.is_dir() else "(file)")
+        # -----------------------------
+        # AUTOEXEC.BAT (classic logic)
+        # -----------------------------
+        lines = ["@ECHO OFF"]
 
-        lines = []
-        lines.append("@ECHO OFF")
+        # Phase 2.5 addition: sound environment
+        sound = config.get("sound", [])
+        if "sb16" in sound:
+            lines.append("SET BLASTER=A220 I7 D1 T6")
+
         lines.append("D:")
 
         if entry_dir != src_root:
             lines.append(f"CD {entry_dir.name}")
 
-        lines.append("echo START > D:\\STARTED.TXT")
+        lines.append("ECHO START > STARTED.TXT")
         lines.append(entry_name)
-        lines.append("echo %ERRORLEVEL% > D:\\ERRLVL.TXT")
-        lines.append("echo END > D:\\FINISH.TXT")
+        lines.append("ECHO %ERRORLEVEL% > ERRLVL.TXT")
+        lines.append("ECHO END > FINISH.TXT")
 
         autoexec = run_dir / "AUTOEXEC.BAT"
         autoexec.write_text("\n".join(lines) + "\n")
 
         # -----------------------------
-        # Synthesize QEMU command
+        # QEMU command (original working shape)
         # -----------------------------
         cmd = [
             QEMU_PATH,
@@ -147,7 +255,7 @@ class QEMURunner:
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
         )
 
         # Keep temp directory alive

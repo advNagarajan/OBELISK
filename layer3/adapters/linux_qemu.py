@@ -32,16 +32,12 @@ class LinuxQEMUAdapter(EmulatorAdapter):
 
             "kernel": {
                 "image": intent.kernel_path,
-                "initramfs": intent.initramfs_path,
-                "cmdline": (
-                    "console=ttyS0 panic=-1 "
-                    f"obelisk.exec={intent.exec_path} "
-                    f"obelisk.args={','.join(intent.exec_args)}"
-                )
+                "cmdline": "console=ttyS0 panic=-1"
             },
 
-            "storage": {
-                "boot_disk": "linux"
+            "artifact": {
+                "path": system_profile.artifact_root,
+                "entrypoint": intent.exec_args[-1].split("/")[-1]
             }
         }
 

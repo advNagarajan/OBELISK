@@ -1,53 +1,30 @@
-def synthesize_qemu_args(config: dict):
-    """
-    Deterministically translate Layer-3 QEMU config JSON
-    into QEMU command-line arguments.
-
-    Phase-2 scope (explicit):
-      - FreeDOS guest
-      - qemu-system-i386
-      - Conservative defaults
-      - No heuristics or fallbacks
-    """
-
+def synthesize_qemu_args(config):
     args = []
 
     machine = config["machine"]
 
-    # -------------------------------------------------
-    # CPU (Phase-2 constraint)
-    # -------------------------------------------------
-    # QEMU does not provide a faithful 8086/286 model.
-    # qemu32 is the minimum practical CPU model that
-    # satisfies all DOS-era architectural requirements.
-    args += ["-cpu", "qemu32"]
+    CPU_CLASS_TO_QEMU = {
+        "286": "486",      # closest usable
+        "386": "486",      # safest baseline
+        "486": "486",
+        "pentium": "pentium",
+    }
 
-    # -------------------------------------------------
-    # Memory (pure semantic mapping)
-    # -------------------------------------------------
-    mem_mb = machine["memory_mb"]
-    args += ["-m", str(mem_mb)]
+    cpu_class = machine.get("cpu", "486")
+    qemu_cpu = CPU_CLASS_TO_QEMU.get(cpu_class, "486")
 
-    # -------------------------------------------------
-    # Graphics (conservative mapping)
-    # -------------------------------------------------
+    args += [
+        "-machine", "pc",
+        "-cpu", qemu_cpu,
+        "-m", str(machine["memory_mb"]),
+    ]
+
     graphics = config.get("graphics", "vga")
-
-    if graphics == "text":
-        args += ["-nographic"]
-    else:
-        # Both vga and svga map to std VGA in Phase 2
+    if graphics == "vga":
         args += ["-vga", "std"]
 
-    # -------------------------------------------------
-    # Intentionally NOT synthesized in Phase 2:
-    #   - sound devices
-    #   - dos_extender semantics
-    #   - machine type
-    #   - timing / acceleration
-    #   - QMP / monitoring
-    #
-    # These are introduced only after Phase 2 is frozen.
-    # -------------------------------------------------
+    sound = config.get("sound", [])
+    if "sb16" in sound:
+        args += ["-device", "sb16"]
 
     return args

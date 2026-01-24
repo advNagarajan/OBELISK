@@ -4,7 +4,6 @@ from typing import List, Dict
 @dataclass
 class LinuxExecutionIntent:
     kernel_path: str
-    initramfs_path: str
 
     exec_path: str          # e.g. /bin/busybox
     exec_args: List[str]    # e.g. ["sh", "/artifact/script.sh"]

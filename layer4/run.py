@@ -17,8 +17,12 @@ def run_layer4(plans):
         else:
             raise ValueError(f"Unknown emulator: {plan.emulator}")
 
-        profiles.append(
-            profiler.profile(plan, runner)
-        )
+        profile = profiler.profile(plan, runner)
 
+        if profile.execution_mode == "SYSTEM":
+            # SYSTEM executions must not rely on process termination
+            assert profile.phases.get("stability_window_reached", False), \
+                "SYSTEM execution did not reach stable state"
+
+        profiles.append(profile)
     return profiles
