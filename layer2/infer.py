@@ -103,6 +103,9 @@ def infer_requirements(scan, inspection, artifact):
     sound = infer_sound_profile(inspection)
     result["sound"] = sound
 
+    if not result["platforms"]:
+        result["platforms"] = []
+
     return result
 
 def infer_sound_profile(inspection):

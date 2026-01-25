@@ -71,6 +71,7 @@ class SystemProfile:
         "boot_disk",
         "dos_program",
         "linux_contract",
+        "baremetal",
         "unknown"
     ]
 

@@ -32,6 +32,8 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         execution_surface = "linux_contract"
     elif candidates:
         execution_surface = "dos_program"
+    elif not inference["platforms"]:
+        execution_surface = "baremetal"
     else:
         execution_surface = "unknown"
 
