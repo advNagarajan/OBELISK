@@ -28,12 +28,19 @@ def synthesize(artifact, scan, candidates, inspection, inference):
     # --------------------------------------
     if artifact.disk_image or artifact.bootable:
         execution_surface = "boot_disk"
+
+    elif inference["constraints"].get("requires_rtos_execution_contract"):
+        execution_surface = "rtos_project"
+
     elif inference["constraints"].get("requires_linux_execution_contract"):
         execution_surface = "linux_contract"
+
     elif candidates:
         execution_surface = "dos_program"
+
     elif not inference["platforms"]:
         execution_surface = "baremetal"
+
     else:
         execution_surface = "unknown"
 

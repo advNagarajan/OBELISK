@@ -5,7 +5,13 @@ def global_scan(artifact):
         "bat": 0,
         "dll": 0,
         "pyd": 0,
-        "boot": 0
+        "boot": 0,
+
+        # --- NEW: RTOS / Zephyr signals ---
+        "zephyr_prj": 0,
+        "cmake": 0,
+        "kconfig": 0,
+        "west_manifest": 0
     }
 
     for f in artifact.files:
@@ -20,5 +26,18 @@ def global_scan(artifact):
             signals["dll"] += 1
         elif name.endswith(".pyd"):
             signals["pyd"] += 1
+            
+        # --- NEW: Zephyr project detection ---
+        if name.endswith("prj.conf"):
+            signals["zephyr_prj"] += 1
+
+        elif name.endswith("cmakelists.txt"):
+            signals["cmake"] += 1
+
+        elif name.endswith("kconfig"):
+            signals["kconfig"] += 1
+
+        elif name.endswith("west.yml"):
+            signals["west_manifest"] += 1
 
     return signals

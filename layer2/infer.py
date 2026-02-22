@@ -35,6 +35,24 @@ def infer_requirements(scan, inspection, artifact):
         "constraints": {},
         "negative": []
     }
+    if scan.get("zephyr_prj", 0) > 0:
+        result["platforms"] = [("rtos", 0.95)]
+        result["constraints"]["requires_rtos_execution_contract"] = True
+        result["negative"] = ["not_dos", "not_linux", "not_windows"]
+
+        result["memory_model"] = "unknown"
+        result["cpu_class"] = {
+            "minimum": "unknown",
+            "confidence": 0.3
+        }
+
+        result["sound"] = {
+            "requirement": "optional",
+            "devices": [],
+            "confidence": 0.3
+        }
+
+        return result
 
     # 🔹 Phase 2.5 Linux short-circuit
     if "linux" in artifact.platforms_present:
