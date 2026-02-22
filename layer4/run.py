@@ -14,6 +14,9 @@ def run_layer4(plans):
         elif plan.emulator == "qemu":
             runner = QEMURunner()
 
+        elif plan.emulator == "zephyr":
+            from layer4.runners.zephyr import ZephyrRunner
+            runner = ZephyrRunner()
         else:
             raise ValueError(f"Unknown emulator: {plan.emulator}")
 

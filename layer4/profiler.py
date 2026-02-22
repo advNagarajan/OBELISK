@@ -11,7 +11,7 @@ from layer4.observers.process import observe_process
 
 class ExecutionProfiler:
     def profile(self, plan, runner):
-        if plan.emulator not in ("dosbox", "qemu"):
+        if plan.emulator not in ("dosbox", "qemu", "zephyr"):
             raise NotImplementedError(
                 f"Layer 4 Phase 2 supports only DOSBox and QEMU got: {plan.emulator}"
             )
@@ -97,7 +97,96 @@ class ExecutionProfiler:
                 host_telemetry=host_telemetry,
             )
         
+        # ============================================================
+        # ZEPHYR (RTOS) PORTION
+        # ============================================================
+        elif plan.emulator == "zephyr":
 
+            import json
+
+            phases = {p: False for p in PHASES}
+
+            with open(plan.config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            timeout_sec = plan.fallback_timeout / 1000.0
+
+            # Launch Zephyr
+            proc = runner.launch(plan)
+            phases["emulator_started"] = True
+
+            # RTOS has no filesystem concept — treat as mounted
+            phases["filesystem_mounted"] = True
+
+            import time
+            time.sleep(timeout_sec)
+
+            try:
+                stdout, stderr = proc.communicate(timeout=2)
+            except Exception:
+                stdout, stderr = "", ""
+
+            output = stdout + stderr
+            lowered = output.lower()
+
+            # -------------------------------------------------
+            # STRICT Zephyr Boot Detection
+            # -------------------------------------------------
+
+            boot_banner = "*** booting zephyr os" in lowered
+            board_name = config.get("board", "").lower()
+            board_line_present = board_name in lowered
+            wrapper_marker = "obelisk wrapper start" in lowered
+
+            boot_detected = False
+
+            if boot_banner:
+                # Native project case
+                if not config.get("wrapper_generated", False):
+                    boot_detected = board_line_present
+
+                # Wrapper case
+                else:
+                    boot_detected = wrapper_marker and board_line_present
+            
+            if not boot_banner:
+                rtos_state = "no_boot"
+            elif boot_banner and not board_line_present:
+                rtos_state = "partial_boot"
+            elif boot_detected:
+                rtos_state = "boot_confirmed"
+            else:
+                rtos_state = "unknown"
+
+            phases["entrypoint_invoked"] = boot_detected
+            phases["control_transferred"] = boot_detected
+            phases["stability_window_reached"] = boot_detected
+
+            try:
+                if proc.poll() is None:
+                    proc.terminate()
+                    proc.wait(timeout=3)
+            except Exception:
+                pass
+
+            return ExecutionProfile(
+                emulator="zephyr",
+                variant=plan.variant,
+                entry_point=None,
+                execution_mode=ExecutionMode.SYSTEM,
+                phases=phases,
+                sentinels={
+                    "boot_banner_seen": boot_banner,
+                    "board_line_seen": board_line_present,
+                    "wrapper_marker_seen": wrapper_marker,
+                    "rtos_boot_detected": boot_detected,
+                },
+                config=config,
+                sound_outcome=None,
+                host_telemetry={
+                    "stdout_sample": stdout[:500]
+                },
+            )
         # ============================================================
         # QEMU PORTION — FIXED
         # ============================================================
