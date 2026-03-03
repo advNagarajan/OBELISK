@@ -23,6 +23,7 @@ artifact_profile.json
 artifact_launch_plans.txt
 artifact_launch_plans.json
 artifact_execution_results.txt
+artifact_result.json
 
 # Generated emulator configs
 generated_dosbox_*.conf
