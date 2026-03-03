@@ -115,6 +115,25 @@ class ExecutionProfiler:
             proc = runner.launch(plan)
             phases["emulator_started"] = True
 
+            if proc is None:
+                print("[ExecutionProfiler] Interactive Zephyr mode — skipping profiling.")
+                
+                return ExecutionProfile(
+                    emulator="zephyr",
+                    variant=plan.variant,
+                    entry_point=None,
+                    execution_mode=ExecutionMode.SYSTEM,
+                    phases=phases,
+                    sentinels={
+                        "interactive_mode": True
+                    },
+                    config=config,
+                    sound_outcome=None,
+                    host_telemetry={
+                        "interactive": True
+                    },
+                )
+
             # RTOS has no filesystem concept — treat as mounted
             phases["filesystem_mounted"] = True
 
