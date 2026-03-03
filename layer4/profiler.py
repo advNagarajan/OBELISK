@@ -145,7 +145,7 @@ class ExecutionProfiler:
             except Exception:
                 stdout, stderr = "", ""
 
-            output = stdout + stderr
+            output = (stdout or "") + (stderr or "")
             lowered = output.lower()
 
             # -------------------------------------------------
