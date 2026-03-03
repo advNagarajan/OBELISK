@@ -1,27 +1,29 @@
 # layer5/explanation.py
 
-def build_explanation(canonical, requirements, observations):
-    """
-    Generate a human-readable explanation for the selected configuration.
-    """
-
+def build_explanation(canonical, requirements, compatibility):
     lines = []
 
-    # Explain inferred requirements
+    lines.append(
+        f"Selected configuration '{canonical.variant}' "
+        f"({canonical.emulator}) achieved stable execution."
+    )
+
     for req in requirements:
         if req.status == "required":
             lines.append(
-                f"{req.feature.capitalize()} support is required for stable execution."
+                f"{req.feature.capitalize()} support appears required for stability."
             )
-        elif req.status == "optional":
+        elif req.status == "preferred":
             lines.append(
-                f"{req.feature.capitalize()} configuration does not affect stability."
+                f"{req.feature.capitalize()} shows a consistent stable preference."
             )
 
-    # Explain selection
-    lines.append(
-        f"The '{canonical.variant}' configuration was selected as it satisfies all "
-        f"inferred requirements while minimizing hardware and timing complexity."
-    )
+    lines.append("Observed stability rates by emulator:")
+
+    for emulator, summary in compatibility.items():
+        lines.append(
+            f"{emulator}: {summary.stable_runs}/{summary.total_runs} "
+            f"stable ({summary.stability_rate})"
+        )
 
     return " ".join(lines)

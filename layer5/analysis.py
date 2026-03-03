@@ -3,15 +3,40 @@
 from layer5.models import ExecutionObservation
 
 
+def classify_execution(profile) -> str:
+    """
+    Conservative classification based on Layer 4 phases.
+    We avoid making strong assumptions due to imperfect markings.
+    """
+
+    phases = profile.phases or {}
+
+    emulator_started = phases.get("emulator_started", False)
+    control = phases.get("control_transferred", False)
+    stable_window = phases.get("stability_window_reached", False)
+
+    if not emulator_started:
+        return "failed"
+
+    # Stable only if BOTH control transferred and stability reached
+    if control and stable_window:
+        return "stable"
+
+    # Partial if control transferred but stability not confirmed
+    if control and not stable_window:
+        return "partial"
+
+    return "failed"
+
+
 def analyze_execution(profile) -> ExecutionObservation:
     """
-    Normalize a Layer 4 ExecutionProfile into an ExecutionObservation.
+    Normalize Layer 4 ExecutionProfile into conservative observation.
     """
 
-    phases = profile.phases
+    execution_class = classify_execution(profile)
 
-    stable = bool(phases.get("stability_window_reached"))
-    unstable = bool(phases.get("control_transferred")) and not stable
+    stable = execution_class == "stable"
 
     features = {
         "sound": profile.config.get("sound_enabled"),
@@ -23,19 +48,13 @@ def analyze_execution(profile) -> ExecutionObservation:
         emulator=profile.emulator,
         variant=profile.variant,
         entry_point=profile.entry_point,
-
+        execution_class=execution_class,
         stable=stable,
-        unstable=unstable,
-
         features=features,
         sound_outcome=profile.sound_outcome,
-
-        host_telemetry=profile.host_telemetry,
+        host_telemetry=profile.host_telemetry or {},
     )
 
 
 def analyze_all(profiles):
-    """
-    Batch version.
-    """
     return [analyze_execution(p) for p in profiles]

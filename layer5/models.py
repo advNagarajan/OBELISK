@@ -4,64 +4,77 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
+# ============================================================
+# Core Observation
+# ============================================================
+
 @dataclass
 class ExecutionObservation:
     """
     Normalized, emulator-agnostic view of one execution attempt.
+    Conservative interpretation of Layer 4 signals.
     """
+
     emulator: str
     variant: str
-    entry_point: str
+    entry_point: Optional[str]
 
-    stable: bool
-    unstable: bool
+    execution_class: str      # stable | partial | failed
+    stable: bool              # convenience flag
 
-    features: Dict[str, object]      # sound, video, timing, cpu (later)
+    features: Dict[str, object]
     sound_outcome: Optional[str]
 
     host_telemetry: Dict[str, object]
 
 
+# ============================================================
+# Inference Output
+# ============================================================
+
 @dataclass
 class InferredRequirement:
-    """
-    Result of correlating features with outcomes.
-    """
-    feature: str                     # e.g. "sound"
-    status: str                      # required | optional | forbidden | unknown
+    feature: str
+    status: str               # required | optional | forbidden | preferred | unknown
     confidence: float
     evidence: List[str]
+    preferred_value: object = None
 
+
+# ============================================================
+# Evaluation / Ranking
+# ============================================================
 
 @dataclass
 class EvaluatedConfiguration:
-    """
-    One configuration after inference + policy evaluation.
-    """
     variant: str
+    emulator: str
+    execution_class: str
     stable: bool
     satisfies_requirements: bool
     score: float
     violations: List[str]
 
 
+# ============================================================
+# Compatibility Metrics
+# ============================================================
+
+@dataclass
+class CompatibilitySummary:
+    total_runs: int
+    stable_runs: int
+    stability_rate: float
+
+
+# ============================================================
+# Final Layer 5 Result
+# ============================================================
+
 @dataclass
 class Layer5Result:
-    """
-    Final output of Layer 5.
-    """
     chosen_variant: str
     inferred_requirements: List[InferredRequirement]
     ranked_variants: List[EvaluatedConfiguration]
+    compatibility_by_emulator: Dict[str, CompatibilitySummary]
     explanation: str
-
-# layer5/models.py (small extension)
-
-@dataclass
-class InferredRequirement:
-    feature: str
-    status: str              # required | optional | forbidden | preferred | unknown
-    confidence: float
-    evidence: List[str]
-    preferred_value: object = None
-
