@@ -1,6 +1,6 @@
 from pathlib import Path
 from layer3.rtos_intent import RTOSExecutionIntent
-
+import shutil
 import re
 
 def rewrite_main_to_legacy(root: Path):
@@ -135,7 +135,7 @@ def resolve_rtos_intent(system_profile) -> RTOSExecutionIntent:
     # Case 2: Wrapper mediation
     # =================================================
 
-    c_files = list(root.rglob("*.c"))
+    c_files = [f for f in root.rglob("*.c") if "layer3_zephyr_wrapper" not in str(f)]
 
     if not c_files:
         raise RuntimeError(
@@ -153,7 +153,15 @@ def resolve_rtos_intent(system_profile) -> RTOSExecutionIntent:
             )
 
     wrapper_root = root / "layer3_zephyr_wrapper"
-    wrapper_root.mkdir(exist_ok=True)
+    if wrapper_root.exists():
+        shutil.rmtree(wrapper_root)
+
+    wrapper_root.mkdir()
+    artifact_dir = wrapper_root / "artifact"
+    artifact_dir.mkdir(exist_ok=True)
+
+    for f in c_files:
+        shutil.copy(f, artifact_dir / f.name)
 
     # --------------------------
     # Zephyr scaffold
@@ -167,9 +175,14 @@ def resolve_rtos_intent(system_profile) -> RTOSExecutionIntent:
         "cmake_minimum_required(VERSION 3.20.0)\n"
         "find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})\n"
         "project(wrapper)\n"
-        "target_sources(app PRIVATE src/main.c)\n"
+        "\n"
+        "file(GLOB LEGACY_SRC artifact/*.c)\n"
+        "\n"
+        "target_sources(app PRIVATE\n"
+        "    src/main.c\n"
+        "    ${LEGACY_SRC}\n"
+        ")\n"
     )
-
     src_dir = wrapper_root / "src"
     src_dir.mkdir(exist_ok=True)
 

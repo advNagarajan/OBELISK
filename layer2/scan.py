@@ -1,3 +1,6 @@
+import os
+
+
 def global_scan(artifact):
     signals = {
         "exe": 0,
@@ -11,7 +14,9 @@ def global_scan(artifact):
         "zephyr_prj": 0,
         "cmake": 0,
         "kconfig": 0,
-        "west_manifest": 0
+        "west_manifest": 0,
+
+        "zephyr_source": 0
     }
 
     for f in artifact.files:
@@ -39,5 +44,16 @@ def global_scan(artifact):
 
         elif name.endswith("west.yml"):
             signals["west_manifest"] += 1
+
+        if name.endswith(".c"):
+            try:
+                with open(os.path.join(artifact.normalized_path, f.path), "r", errors="ignore") as src:
+                    text = src.read().lower()
+
+                    if "zephyr/" in text or "printk(" in text or "k_thread" in text:
+                        signals["zephyr_source"] += 1
+
+            except Exception:
+                pass
 
     return signals

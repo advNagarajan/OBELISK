@@ -35,7 +35,7 @@ def infer_requirements(scan, inspection, artifact):
         "constraints": {},
         "negative": []
     }
-    if scan.get("zephyr_prj", 0) > 0:
+    if scan.get("zephyr_prj", 0) > 0 or scan.get("zephyr_source", 0) > 0:
         result["platforms"] = [("rtos", 0.95)]
         result["constraints"]["requires_rtos_execution_contract"] = True
         result["negative"] = ["not_dos", "not_linux", "not_windows"]
