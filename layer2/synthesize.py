@@ -77,10 +77,27 @@ def synthesize(artifact, scan, candidates, inspection, inference):
             e["file"] for e in inspection.get("pm_evidence", [])
         })
 
+    sound = inference.get("sound")
+
+    # Normalize sound field
+    if isinstance(sound, list):
+        sound = {
+            "requirement": "optional",
+            "devices": sound,
+            "confidence": 0.5
+        }
+
+    if sound is None:
+        sound = {
+            "requirement": "absent",
+            "devices": [],
+            "confidence": 0.0
+        }
+
     sound_profile = SoundProfile(
-        requirement=inference["sound"]["requirement"],
-        supported_devices=inference["sound"]["devices"],
-        confidence=inference["sound"]["confidence"],
+        requirement=sound["requirement"],
+        supported_devices=sound["devices"],
+        confidence=sound["confidence"],
         evidence=inspection.get("sound_evidence", [])
     )
 
@@ -113,6 +130,6 @@ def synthesize(artifact, scan, candidates, inspection, inference):
         evidence=evidence,
         execution_evidence=execution_evidence,
 
-        execution_surface=execution_surface,
+        execution_surface=execution_surface, # type: ignore
         linux_execution_contract=linux_execution_contract
     )
