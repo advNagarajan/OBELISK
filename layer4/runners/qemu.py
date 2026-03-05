@@ -145,8 +145,8 @@ class QEMURunner:
             )
 
             # Phase 2.5 Linux semantic markers
-            proc._obelisk_execution_model = "system"
-            proc._obelisk_platform = "linux"
+            proc._obelisk_execution_model = "system" # type: ignore
+            proc._obelisk_platform = "linux" # type: ignore
 
             return proc
 
@@ -162,7 +162,7 @@ class QEMURunner:
             raise ValueError("DOS execution requires an entry point")
 
         src_root = Path(plan.artifact_root)
-        entry = entry.upper()
+        entry = Path(entry).name.upper()
 
         candidates = [entry]
         if "." not in entry:
@@ -231,10 +231,10 @@ class QEMURunner:
         if entry_dir != src_root:
             lines.append(f"CD {entry_dir.name}")
 
-        lines.append("ECHO START > STARTED.TXT")
-        lines.append(entry_name)
-        lines.append("ECHO %ERRORLEVEL% > ERRLVL.TXT")
-        lines.append("ECHO END > FINISH.TXT")
+        lines.append("ECHO START > D:\\STARTED.TXT")
+        lines.append(entry_name) # type: ignore
+        lines.append("ECHO %ERRORLEVEL% > D:\\ERRLVL.TXT")
+        lines.append("ECHO END > D:\\FINISH.TXT")
 
         autoexec = run_dir / "AUTOEXEC.BAT"
         autoexec.write_text("\n".join(lines) + "\n")
@@ -259,7 +259,7 @@ class QEMURunner:
         )
 
         # Keep temp directory alive
-        proc._obelisk_tmpdir = tmpdir
-        proc._obelisk_run_dir = run_dir
+        proc._obelisk_tmpdir = tmpdir # type: ignore
+        proc._obelisk_run_dir = run_dir # type: ignore
 
         return proc

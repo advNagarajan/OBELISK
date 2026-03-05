@@ -14,7 +14,44 @@ ADAPTERS = [
     ZephyrAdapter()
 ]
 
+from pathlib import Path
+
+PREFERRED_MAIN_NAMES = {
+    "main", "run", "game", "app",
+    "doom", "mario", "nibbles", "tc"
+}
+
+UTILITY_NAMES = {
+    "make", "tlink", "tlib", "bgobj",
+    "grep", "touch", "cpp", "objxref"
+}
+
+
+def _score_entry(path: str):
+    name = Path(path).stem.lower()
+    score = 0
+
+    # prefer likely main executables
+    if name in PREFERRED_MAIN_NAMES:
+        score += 100
+
+    # penalize utilities
+    if name in UTILITY_NAMES:
+        score -= 50
+
+    # shorter names often mean main programs
+    score -= len(name)
+
+    return score
+
 def synthesize(system_profile):
+
+    # --- ENTRYPOINT HEURISTIC ---
+    if getattr(system_profile, "entry_points", None):
+        system_profile.entry_points.sort(
+            key=lambda e: _score_entry(e.path),
+            reverse=True
+        )
 
     plans = []
     if system_profile.execution_surface in (
