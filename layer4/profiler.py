@@ -237,29 +237,44 @@ class ExecutionProfiler:
             # LINUX IS NON-TERMINATING — DO NOT TOUCH PROCESS
             # ============================================================
             if plan.variant.startswith("linux"):
-                phases["entrypoint_invoked"] = True
-                phases["control_transferred"] = True
-                phases["stability_window_reached"] = True
+
+                time.sleep(timeout_sec)
+
+                serial_log = Path("serial.log")
+
+                boot_seen = False
+                artifact_started = False
+                artifact_exited = False
+
+                if serial_log.exists():
+                    text = serial_log.read_text(errors="ignore").lower()
+
+                    boot_seen = "obelisk: custom init starting" in text
+                    artifact_started = "obelisk: exec" in text
+                    artifact_exited = "artifact exited with code" in text
+
+                phases["filesystem_mounted"] = boot_seen
+                phases["entrypoint_invoked"] = artifact_started
+                phases["control_transferred"] = artifact_started
+                phases["stability_window_reached"] = boot_seen
 
                 return ExecutionProfile(
                     emulator="qemu",
                     variant=plan.variant,
-                    entry_point=None,  # SYSTEM execution has no entry point
+                    entry_point=None,
                     execution_mode=ExecutionMode.SYSTEM,
                     phases=phases,
                     sentinels={
-                        "system_booted": True,
-                        "pid1_alive": True,
+                        "boot_seen": boot_seen,
+                        "artifact_started": artifact_started,
+                        "artifact_exited": artifact_exited,
                     },
                     config=config,
                     sound_outcome=None,
                     host_telemetry={
-                        "system_mode": True,
-                        "process_model": "non-terminating",
-                        "qemu_running": proc.poll() is None,
+                        "linux_serial_observed": serial_log.exists()
                     },
                 )
-
             time.sleep(timeout_sec)
             try:
                 stdout, stderr = proc.communicate(timeout=2)

@@ -6,6 +6,7 @@ from layer3.adapters.base import EmulatorAdapter
 from layer3.launchplan import LaunchPlan
 from layer3.linux_intent import LinuxExecutionIntent
 
+
 class LinuxQEMUAdapter(EmulatorAdapter):
 
     def supports(self, system_profile) -> bool:
@@ -22,6 +23,17 @@ class LinuxQEMUAdapter(EmulatorAdapter):
 
         config_path = os.path.join(output_dir, "qemu_linux.json")
 
+        # -------------------------------------------------
+        # Determine artifact entrypoint
+        # -------------------------------------------------
+        if intent.exec_args:
+            entrypoint = intent.exec_args[-1].split("/")[-1]
+        else:
+            entrypoint = intent.exec_path.split("/")[-1]
+
+        # -------------------------------------------------
+        # Construct Linux execution config
+        # -------------------------------------------------
         config = {
             "platform": "linux",
 
@@ -37,7 +49,7 @@ class LinuxQEMUAdapter(EmulatorAdapter):
 
             "artifact": {
                 "path": system_profile.artifact_root,
-                "entrypoint": intent.exec_args[-1].split("/")[-1]
+                "entrypoint": entrypoint
             }
         }
 

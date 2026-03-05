@@ -1,31 +1,79 @@
 from pathlib import Path
 from layer3.linux_intent import LinuxExecutionIntent
 
+def is_elf_binary(path: Path) -> bool:
+    try:
+        with open(path, "rb") as f:
+            magic = f.read(4)
+            return magic == b"\x7fELF"
+    except Exception:
+        return False
+
 
 def resolve_linux_intent(system_profile) -> LinuxExecutionIntent:
     artifact_root = Path(system_profile.artifact_root)
 
-    # ----------------------------
-    # Phase 2.5: single-script Linux
-    # ----------------------------
-    scripts = [
+    # -------------------------------------------------
+    # Phase 2.5: locate candidate artifact entrypoints
+    # -------------------------------------------------
+    files = [
         f for f in artifact_root.iterdir()
-        if f.is_file() and f.suffix == ".sh"
+        if f.is_file()
     ]
 
-    if len(scripts) != 1:
-        raise NotImplementedError(
-            "Phase 2.5 Linux supports exactly one shell script artifact"
+    if not files:
+        raise RuntimeError(
+            "Linux artifact directory contains no executable files"
         )
 
-    script = scripts[0]
+    # Prefer common entrypoint names if present
+    preferred_names = [
+        "main",
+        "run",
+        "start",
+        "app",
+        "script"
+    ]
 
-    exec_path = "/bin/busybox"
-    exec_args = ["sh", f"/artifact/{script.name}"]
+    entry = None
 
-    # ----------------------------
+    for name in preferred_names:
+        for f in files:
+            if f.stem.lower() == name:
+                entry = f
+                break
+        if entry:
+            break
+
+    if entry is None:
+        entry = files[0]
+
+    # -------------------------------------------------
+    # Determine execution wrapper
+    # -------------------------------------------------
+
+    if entry.suffix == ".sh":
+        exec_path = "/bin/sh"
+        exec_args = [f"/artifact/{entry.name}"]
+
+    elif entry.suffix == ".py":
+        exec_path = "/usr/bin/python3"
+        exec_args = [f"/artifact/{entry.name}"]
+
+    elif is_elf_binary(entry):
+        # native executable
+        exec_path = f"/artifact/{entry.name}"
+        exec_args = []
+
+    else:
+        # fallback: treat as shell script
+        exec_path = "/bin/sh"
+        exec_args = [f"/artifact/{entry.name}"]
+
+    # -------------------------------------------------
     # Canonical kernel (platform-owned)
-    # ----------------------------
+    # -------------------------------------------------
+
     kernel_path = (
         Path(__file__)
         .resolve()
@@ -39,6 +87,10 @@ def resolve_linux_intent(system_profile) -> LinuxExecutionIntent:
         raise FileNotFoundError(
             f"Linux kernel not found at {kernel_path}"
         )
+
+    # -------------------------------------------------
+    # Construct execution intent
+    # -------------------------------------------------
 
     return LinuxExecutionIntent(
         kernel_path=str(kernel_path),
