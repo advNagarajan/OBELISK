@@ -94,7 +94,7 @@ class ExecutionProfiler:
                 },
                 config=config,
                 sound_outcome=sound_outcome,
-                host_telemetry=host_telemetry,
+                host_telemetry=dict(host_telemetry)
             )
         
         # ============================================================
@@ -137,7 +137,6 @@ class ExecutionProfiler:
             # RTOS has no filesystem concept — treat as mounted
             phases["filesystem_mounted"] = True
 
-            import time
             time.sleep(timeout_sec)
 
             try:

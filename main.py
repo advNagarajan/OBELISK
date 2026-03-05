@@ -14,7 +14,7 @@ from dataclasses import asdict
 # CONFIG
 # -------------------------------------------------
 
-DEFAULT_ARTIFACT = "input/rtos/legacy_hello"   # change as needed
+DEFAULT_ARTIFACT = "input/dos/Doom"   # change as needed
 
 
 def banner(title):
