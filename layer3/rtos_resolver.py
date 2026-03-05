@@ -1,6 +1,34 @@
 from pathlib import Path
 from layer3.rtos_intent import RTOSExecutionIntent
 
+import re
+
+def rewrite_main_to_legacy(root: Path):
+
+    rewritten = False
+
+    for file in root.rglob("*.c"):
+
+        try:
+            text = file.read_text(errors="ignore")
+
+            # match: int main(...)
+            new_text, count = re.subn(
+                r'\bint\s+main\s*\(',
+                'int legacy_main(',
+                text,
+                count=1
+            )
+
+            if count > 0:
+                file.write_text(new_text)
+                rewritten = True
+                break
+
+        except Exception:
+            continue
+
+    return rewritten
 
 # -------------------------------------------------
 # Board Inference
@@ -116,9 +144,13 @@ def resolve_rtos_intent(system_profile) -> RTOSExecutionIntent:
 
     # Enforce explicit symbol contract
     if not _has_legacy_main(root):
-        raise RuntimeError(
-            "RTOS wrapping requires: int legacy_main(void);"
-        )
+
+        rewritten = rewrite_main_to_legacy(root)
+
+        if not rewritten:
+            raise RuntimeError(
+                "No entrypoint found: expected main() or legacy_main()"
+            )
 
     wrapper_root = root / "layer3_zephyr_wrapper"
     wrapper_root.mkdir(exist_ok=True)

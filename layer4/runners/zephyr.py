@@ -225,7 +225,7 @@ class ZephyrRunner:
                 pass
 
         dummy = DummyProc()
-        dummy._obelisk_execution_model = "rtos"
-        dummy._obelisk_platform = "zephyr"
+        dummy._obelisk_execution_model = "rtos" # type: ignore
+        dummy._obelisk_platform = "zephyr" # type: ignore
 
         return dummy
