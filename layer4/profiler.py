@@ -159,14 +159,17 @@ class ExecutionProfiler:
 
             boot_detected = False
 
-            if boot_banner:
-                # Native project case
-                if not config.get("wrapper_generated", False):
-                    boot_detected = board_line_present
+            # -------------------------------------------------
+            # Zephyr boot confirmation logic
+            # -------------------------------------------------
 
-                # Wrapper case
-                else:
-                    boot_detected = wrapper_marker and board_line_present
+            if boot_banner:
+                # Boot banner alone is strong evidence of system boot
+                boot_detected = True
+
+            # Wrapper marker is extra confirmation if present
+            if wrapper_marker:
+                boot_detected = True
             
             if not boot_banner:
                 rtos_state = "no_boot"

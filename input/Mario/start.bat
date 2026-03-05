@@ -1,1 +1,0 @@
-infrun.bat

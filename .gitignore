@@ -9,6 +9,7 @@ assets/
 build/
 serial.log
 linux_test_config.json
+input/initial_tests/
 
 # Layer output
 layer3_output/

@@ -1,2 +1,0 @@
-cwsdpmi -x
-Warkurre

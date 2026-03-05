@@ -14,7 +14,7 @@ from dataclasses import asdict
 # CONFIG
 # -------------------------------------------------
 
-DEFAULT_ARTIFACT = "input/hello_world"   # change as needed
+DEFAULT_ARTIFACT = "input/rtos/zephyr_philosophers"   # change as needed
 
 
 def banner(title):
