@@ -14,7 +14,7 @@ from dataclasses import asdict
 # CONFIG
 # -------------------------------------------------
 
-DEFAULT_ARTIFACT = "input/dos/Doom"   # change as needed
+DEFAULT_ARTIFACT = "input/dos/Wolfenstein3D"   # change as needed
 
 
 def banner(title):
