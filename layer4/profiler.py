@@ -1,5 +1,6 @@
 import time
 from pathlib import Path
+import re
 
 from layer4.models import ExecutionProfile
 from layer4.phases import PHASES
@@ -245,18 +246,27 @@ class ExecutionProfiler:
                 boot_seen = False
                 artifact_started = False
                 artifact_exited = False
+                exit_code = None
 
                 if serial_log.exists():
                     text = serial_log.read_text(errors="ignore").lower()
 
                     boot_seen = "obelisk: custom init starting" in text
                     artifact_started = "obelisk: exec" in text
-                    artifact_exited = "artifact exited with code" in text
+
+                    m = re.search(r"artifact exited with code (\d+)", text)
+                    if m:
+                        exit_code = int(m.group(1))
+                        artifact_exited = True
 
                 phases["filesystem_mounted"] = boot_seen
                 phases["entrypoint_invoked"] = artifact_started
                 phases["control_transferred"] = artifact_started
-                phases["stability_window_reached"] = boot_seen
+
+                # stability requires successful artifact exit
+                phases["stability_window_reached"] = (
+                    boot_seen and artifact_started and exit_code == 0
+                )
 
                 return ExecutionProfile(
                     emulator="qemu",
@@ -268,6 +278,7 @@ class ExecutionProfiler:
                         "boot_seen": boot_seen,
                         "artifact_started": artifact_started,
                         "artifact_exited": artifact_exited,
+                        "artifact_exit_code": exit_code,
                     },
                     config=config,
                     sound_outcome=None,
