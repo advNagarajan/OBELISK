@@ -23,7 +23,6 @@ def run_layer4(plans):
         profile = profiler.profile(plan, runner)
 
         if profile.execution_mode == "SYSTEM":
-            # SYSTEM executions must not rely on process termination
             assert profile.phases.get("stability_window_reached", False), \
                 "SYSTEM execution did not reach stable state"
 

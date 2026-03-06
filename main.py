@@ -14,7 +14,7 @@ from dataclasses import asdict
 # CONFIG
 # -------------------------------------------------
 
-DEFAULT_ARTIFACT = "input/linux/filesystem"   # change as needed
+DEFAULT_ARTIFACT = "input/_____"   # change as needed
 
 
 def banner(title):

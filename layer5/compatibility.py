@@ -1,5 +1,3 @@
-# layer5/compatibility.py
-
 from collections import defaultdict
 from layer5.models import CompatibilitySummary
 

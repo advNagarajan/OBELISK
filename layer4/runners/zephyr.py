@@ -164,9 +164,6 @@ class ZephyrRunner:
         # -------------------------------------------------
         # DETERMINISTIC MODE (capture output)
         # -------------------------------------------------
-                # -------------------------------------------------
-        # DETERMINISTIC MODE (capture via serial file)
-        # -------------------------------------------------
 
         print("[ZephyrRunner] Launching QEMU (deterministic mode)...")
 

@@ -1,5 +1,3 @@
-# layer5/run.py
-
 import json
 from pathlib import Path
 from dataclasses import asdict

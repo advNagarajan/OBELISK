@@ -9,8 +9,6 @@ def global_scan(artifact):
         "dll": 0,
         "pyd": 0,
         "boot": 0,
-
-        # --- NEW: RTOS / Zephyr signals ---
         "zephyr_prj": 0,
         "cmake": 0,
         "kconfig": 0,

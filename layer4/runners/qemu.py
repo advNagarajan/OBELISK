@@ -1,5 +1,3 @@
-# layer4/runners/qemu.py
-
 import subprocess
 import tempfile
 import shutil
@@ -19,20 +17,6 @@ def windows_short_path(p: Path) -> str:
     return out.strip()
 
 class QEMURunner:
-    """
-    Phase 2.5 QEMU runner.
-
-    DOS:
-      - Boots FreeDOS from system image
-      - Uses per-run FAT directory as D:
-      - Executes AUTOEXEC.BAT via FDAUTO.BAT
-
-    Linux:
-      - Kernel + initramfs (system boot model)
-      - No entry point
-      - Non-terminating execution
-    """
-
     def launch(self, plan):
         print(">>> QEMURunner.launch() CALLED FROM:", __file__)
 
@@ -132,8 +116,6 @@ class QEMURunner:
                     "console=tty0 console=ttyS0 panic=-1"
                 ),
                 "-no-reboot",
-                # Serial is logged for observability; success is userspace reach,
-                # not process exit.
                 "-serial", "file:serial.log",
             ]
 
@@ -144,15 +126,14 @@ class QEMURunner:
                 text=True,
             )
 
-            # Phase 2.5 Linux semantic markers
             proc._obelisk_execution_model = "system" # type: ignore
             proc._obelisk_platform = "linux" # type: ignore
 
             return proc
 
-        # -----------------------------
-        # DOS execution path (unchanged)
-        # -----------------------------
+        # ------------------
+        # DOS execution path
+        # ------------------
         execution = config.get("execution", {})
         if not execution.get("autoexec", False):
             raise NotImplementedError("DOS execution requires autoexec")

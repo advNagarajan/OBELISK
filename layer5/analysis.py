@@ -1,5 +1,3 @@
-# layer5/analysis.py
-
 from layer5.models import ExecutionObservation
 
 

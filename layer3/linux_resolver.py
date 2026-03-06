@@ -13,9 +13,6 @@ def is_elf_binary(path: Path) -> bool:
 def resolve_linux_intent(system_profile) -> LinuxExecutionIntent:
     artifact_root = Path(system_profile.artifact_root)
 
-    # -------------------------------------------------
-    # Phase 2.5: locate candidate artifact entrypoints
-    # -------------------------------------------------
     files = [
         f for f in artifact_root.iterdir()
         if f.is_file()

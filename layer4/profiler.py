@@ -18,7 +18,7 @@ class ExecutionProfiler:
             )
 
         # ============================================================
-        # DOSBOX PORTION — UNCHANGED
+        # DOSBOX PORTION
         # ============================================================
         if plan.emulator == "dosbox":
             phases = {p: False for p in PHASES}
@@ -210,7 +210,7 @@ class ExecutionProfiler:
                 },
             )
         # ============================================================
-        # QEMU PORTION — FIXED
+        # QEMU PORTION
         # ============================================================
         elif plan.emulator == "qemu":
             import json
@@ -235,7 +235,7 @@ class ExecutionProfiler:
                 phases["filesystem_mounted"] = True
 
             # ============================================================
-            # LINUX IS NON-TERMINATING — DO NOT TOUCH PROCESS
+            # LINUX IS NON-TERMINATING
             # ============================================================
             if plan.variant.startswith("linux"):
 
@@ -292,7 +292,6 @@ class ExecutionProfiler:
             except Exception:
                 stdout, stderr = "", ""
 
-            # --- IMPORTANT FIX ---
             # QEMU sentinels live in FAT-backed run_dir, NOT artifact_root
             run_dir = getattr(proc, "_obelisk_run_dir", None)
             if run_dir is None:
@@ -316,7 +315,6 @@ class ExecutionProfiler:
                     except ValueError:
                         errorlevel = None
 
-            # --- FIXED PHASE LOGIC ---
             # Long-running programs (DOOM) are valid
             phases["entrypoint_invoked"] = started
             phases["control_transferred"] = started
@@ -327,10 +325,7 @@ class ExecutionProfiler:
                     proc.wait(timeout=3)
             except Exception:
                 pass
-
-            # --- Capture console output ---
             
-
             console_facts = analyze_console_output(stdout, stderr)
             process_facts = observe_process(proc, timeout=1)
 

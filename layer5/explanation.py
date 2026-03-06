@@ -1,5 +1,3 @@
-# layer5/explanation.py
-
 def build_explanation(canonical, requirements, compatibility):
     lines = []
 

@@ -1,5 +1,3 @@
-# layer5/inference.py
-
 from collections import Counter
 from layer5.models import InferredRequirement
 

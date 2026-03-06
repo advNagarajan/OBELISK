@@ -1,5 +1,3 @@
-# layer5/selection.py
-
 from layer5.models import EvaluatedConfiguration
 
 

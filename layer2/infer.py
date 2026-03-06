@@ -1,5 +1,3 @@
-# layer2/infer.py
-
 def _eval_protected_mode(pm_evidence):
     """
     Decide whether protected mode is justified based on
