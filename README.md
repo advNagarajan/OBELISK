@@ -1,5 +1,7 @@
 # OBELISK
 
+![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)
+
 **OBELISK** (Omnibus Bootable Emulation Layer for Inferred System Kernels)  
 A framework for studying execution compatibility across reconstructed software environments.
 
